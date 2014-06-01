@@ -1,0 +1,60 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2013
+VisualStudioVersion = 12.0.30501.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "GifRenderer", "GifRenderer", "{A63CCFBD-164C-4896-9306-25FF73E85DD4}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "GifRenderer.Shared", "GifRenderer.Shared\GifRenderer.Shared.vcxitems", "{ED38C92B-F8D2-459B-9A7F-4A215D689993}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "GifRenderer.Windows", "GifRenderer.Windows\GifRenderer.Windows.vcxproj", "{57985DF4-90BC-4B9F-B1FC-291A30A48156}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "GifRenderer.WindowsPhone", "GifRenderer.WindowsPhone\GifRenderer.WindowsPhone.vcxproj", "{03EFE940-9E63-48F1-9194-71BD3676FB3B}"
+EndProject
+Global
+	GlobalSection(SharedMSBuildProjectFiles) = preSolution
+		GifRenderer.Shared\GifRenderer.Shared.vcxitems*{03efe940-9e63-48f1-9194-71bd3676fb3b}*SharedItemsImports = 4
+		GifRenderer.Shared\GifRenderer.Shared.vcxitems*{57985df4-90bc-4b9f-b1fc-291a30a48156}*SharedItemsImports = 4
+		GifRenderer.Shared\GifRenderer.Shared.vcxitems*{ed38c92b-f8d2-459b-9a7f-4a215d689993}*SharedItemsImports = 9
+	EndGlobalSection
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|ARM = Debug|ARM
+		Debug|Win32 = Debug|Win32
+		Debug|x64 = Debug|x64
+		Release|ARM = Release|ARM
+		Release|Win32 = Release|Win32
+		Release|x64 = Release|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{57985DF4-90BC-4B9F-B1FC-291A30A48156}.Debug|ARM.ActiveCfg = Debug|ARM
+		{57985DF4-90BC-4B9F-B1FC-291A30A48156}.Debug|ARM.Build.0 = Debug|ARM
+		{57985DF4-90BC-4B9F-B1FC-291A30A48156}.Debug|Win32.ActiveCfg = Debug|Win32
+		{57985DF4-90BC-4B9F-B1FC-291A30A48156}.Debug|Win32.Build.0 = Debug|Win32
+		{57985DF4-90BC-4B9F-B1FC-291A30A48156}.Debug|x64.ActiveCfg = Debug|x64
+		{57985DF4-90BC-4B9F-B1FC-291A30A48156}.Debug|x64.Build.0 = Debug|x64
+		{57985DF4-90BC-4B9F-B1FC-291A30A48156}.Release|ARM.ActiveCfg = Release|ARM
+		{57985DF4-90BC-4B9F-B1FC-291A30A48156}.Release|ARM.Build.0 = Release|ARM
+		{57985DF4-90BC-4B9F-B1FC-291A30A48156}.Release|Win32.ActiveCfg = Release|Win32
+		{57985DF4-90BC-4B9F-B1FC-291A30A48156}.Release|Win32.Build.0 = Release|Win32
+		{57985DF4-90BC-4B9F-B1FC-291A30A48156}.Release|x64.ActiveCfg = Release|x64
+		{57985DF4-90BC-4B9F-B1FC-291A30A48156}.Release|x64.Build.0 = Release|x64
+		{03EFE940-9E63-48F1-9194-71BD3676FB3B}.Debug|ARM.ActiveCfg = Debug|ARM
+		{03EFE940-9E63-48F1-9194-71BD3676FB3B}.Debug|ARM.Build.0 = Debug|ARM
+		{03EFE940-9E63-48F1-9194-71BD3676FB3B}.Debug|Win32.ActiveCfg = Debug|Win32
+		{03EFE940-9E63-48F1-9194-71BD3676FB3B}.Debug|Win32.Build.0 = Debug|Win32
+		{03EFE940-9E63-48F1-9194-71BD3676FB3B}.Debug|x64.ActiveCfg = Debug|Win32
+		{03EFE940-9E63-48F1-9194-71BD3676FB3B}.Release|ARM.ActiveCfg = Release|ARM
+		{03EFE940-9E63-48F1-9194-71BD3676FB3B}.Release|ARM.Build.0 = Release|ARM
+		{03EFE940-9E63-48F1-9194-71BD3676FB3B}.Release|Win32.ActiveCfg = Release|Win32
+		{03EFE940-9E63-48F1-9194-71BD3676FB3B}.Release|Win32.Build.0 = Release|Win32
+		{03EFE940-9E63-48F1-9194-71BD3676FB3B}.Release|x64.ActiveCfg = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{ED38C92B-F8D2-459B-9A7F-4A215D689993} = {A63CCFBD-164C-4896-9306-25FF73E85DD4}
+		{57985DF4-90BC-4B9F-B1FC-291A30A48156} = {A63CCFBD-164C-4896-9306-25FF73E85DD4}
+		{03EFE940-9E63-48F1-9194-71BD3676FB3B} = {A63CCFBD-164C-4896-9306-25FF73E85DD4}
+	EndGlobalSection
+EndGlobal

@@ -1,0 +1,34 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup Label="Globals">
+    <MSBuildAllProjects>$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
+    <HasSharedItems>true</HasSharedItems>
+    <ItemsProjectGuid>{ed38c92b-f8d2-459b-9a7f-4a215d689993}</ItemsProjectGuid>
+    <ItemsRootNamespace>GifRenderer</ItemsRootNamespace>
+    <ItemsProjectName>GifRenderer.Shared</ItemsProjectName>
+    <CodeSharingProject>248F659F-DAC5-46E8-AC09-60EC9FC95053</CodeSharingProject>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(MSBuildThisFileDirectory)inc\;%(AdditionalIncludeDirectories);$(MSBuildThisFileDirectory)</AdditionalIncludeDirectories>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="$(MSBuildThisFileDirectory)src\dgif_lib.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)src\GifLoader.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)src\GifRenderer.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)src\gif_err.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)src\gif_font.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)src\gif_hash.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)src\gifalloc.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)src\quantize.cpp" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)inc\BasicTimer.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)inc\GifLoader.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)inc\gif_hash.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)inc\gif_lib.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)inc\gif_lib_private.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectCapability Include="SourceItemsFromImports" />
+  </ItemGroup>
+</Project>
