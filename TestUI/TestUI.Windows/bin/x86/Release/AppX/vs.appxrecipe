@@ -1,0 +1,105 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Machine>HH-64</Machine>
+    <WindowsUser>hippi_000</WindowsUser>
+    <TargetPlatformIdentifier>Windows</TargetPlatformIdentifier>
+    <SolutionConfiguration>Release|x86</SolutionConfiguration>
+    <PackageArchitecture>x86</PackageArchitecture>
+    <PackageIdentityName>3a9e59f0-4c94-400a-ba13-e1e74431a9be</PackageIdentityName>
+    <IntermediateOutputPath>C:\Users\hippi_000\Documents\GitHub\GifRenderer\TestUI\TestUI.Windows\obj\x86\Release\</IntermediateOutputPath>
+    <RegisteredManifestChecksum>E5D481F05F5C5B698DAE42D96D28BECD7532E1B1EA07A826A10D91DB7A68F32C</RegisteredManifestChecksum>
+    <RegisteredPackageMoniker>3a9e59f0-4c94-400a-ba13-e1e74431a9be_1.0.0.0_x86__s625qe4qwtc2j</RegisteredPackageMoniker>
+    <RegisteredUserModeAppID>3a9e59f0-4c94-400a-ba13-e1e74431a9be_s625qe4qwtc2j!App</RegisteredUserModeAppID>
+    <RegisteredPackageID>3a9e59f0-4c94-400a-ba13-e1e74431a9be</RegisteredPackageID>
+    <RegisteredPackagePublisher>CN=hippi_000</RegisteredPackagePublisher>
+    <RegisteredVersion>1.0.0.0</RegisteredVersion>
+    <JitOptimizationSuppressed>True</JitOptimizationSuppressed>
+  </PropertyGroup>
+  <ItemGroup>
+    <AppXManifest Include="C:\Users\hippi_000\Documents\GitHub\GifRenderer\TestUI\TestUI.Windows\bin\x86\Release\AppxManifest.xml">
+      <PackagePath>AppxManifest.xml</PackagePath>
+      <ReRegisterAppIfChanged>true</ReRegisterAppIfChanged>
+      <Modified>2014-06-01T20:07:30.457</Modified>
+    </AppXManifest>
+  </ItemGroup>
+  <ItemGroup>
+    <AppxPackagedFile Include="C:\Users\hippi_000\Documents\GitHub\GifRenderer\TestUI\TestUI.Windows\bin\x86\Release\TestUI.Windows.exe">
+      <PackagePath>TestUI.Windows.exe</PackagePath>
+      <Modified>2014-06-02T01:14:56.474</Modified>
+    </AppxPackagedFile>
+    <AppxPackagedFile Include="C:\Users\hippi_000\Documents\GitHub\GifRenderer\Release\GifRenderer.Windows\GifRenderer.winmd">
+      <PackagePath>GifRenderer.winmd</PackagePath>
+      <Modified>2014-06-01T06:31:25.202</Modified>
+    </AppxPackagedFile>
+    <AppxPackagedFile Include="C:\Users\hippi_000\Documents\GitHub\GifRenderer\Release\GifRenderer.Windows\GifRenderer.Windows.dll">
+      <PackagePath>GifRenderer.Windows.dll</PackagePath>
+      <Modified>2014-06-02T01:00:57.004</Modified>
+    </AppxPackagedFile>
+    <AppxPackagedFile Include="C:\Users\hippi_000\Documents\GitHub\GifRenderer\TestUI\TestUI.Windows\Assets\Logo.scale-100.png">
+      <PackagePath>Assets\Logo.scale-100.png</PackagePath>
+      <ReRegisterAppIfChanged>true</ReRegisterAppIfChanged>
+      <Modified>2014-03-13T04:06:34.000</Modified>
+    </AppxPackagedFile>
+    <AppxPackagedFile Include="C:\Users\hippi_000\Documents\GitHub\GifRenderer\TestUI\TestUI.Windows\Assets\SmallLogo.scale-100.png">
+      <PackagePath>Assets\SmallLogo.scale-100.png</PackagePath>
+      <ReRegisterAppIfChanged>true</ReRegisterAppIfChanged>
+      <Modified>2014-03-13T04:06:34.000</Modified>
+    </AppxPackagedFile>
+    <AppxPackagedFile Include="C:\Users\hippi_000\Documents\GitHub\GifRenderer\TestUI\TestUI.Windows\Assets\SplashScreen.scale-100.png">
+      <PackagePath>Assets\SplashScreen.scale-100.png</PackagePath>
+      <ReRegisterAppIfChanged>true</ReRegisterAppIfChanged>
+      <Modified>2014-03-13T04:06:34.000</Modified>
+    </AppxPackagedFile>
+    <AppxPackagedFile Include="C:\Users\hippi_000\Documents\GitHub\GifRenderer\TestUI\TestUI.Windows\Assets\StoreLogo.scale-100.png">
+      <PackagePath>Assets\StoreLogo.scale-100.png</PackagePath>
+      <ReRegisterAppIfChanged>true</ReRegisterAppIfChanged>
+      <Modified>2014-03-13T04:06:34.000</Modified>
+    </AppxPackagedFile>
+    <AppxPackagedFile Include="C:\Users\hippi_000\Documents\GitHub\GifRenderer\TestUI\TestUI.Windows\bin\x86\Release\App.xbf">
+      <PackagePath>App.xbf</PackagePath>
+      <Modified>2014-06-01T18:46:38.731</Modified>
+    </AppxPackagedFile>
+    <AppxPackagedFile Include="C:\Users\hippi_000\Documents\GitHub\GifRenderer\TestUI\TestUI.Windows\bin\x86\Release\MainPage.xbf">
+      <PackagePath>MainPage.xbf</PackagePath>
+      <Modified>2014-06-01T20:07:29.663</Modified>
+    </AppxPackagedFile>
+    <AppxPackagedFile Include="C:\Users\hippi_000\Documents\GitHub\GifRenderer\TestUI\TestUI.Windows\bin\x86\Release\TestUI.Windows.xr.xml">
+      <PackagePath>TestUI.Windows.xr.xml</PackagePath>
+      <Modified>2014-06-01T19:49:21.891</Modified>
+    </AppxPackagedFile>
+    <AppxPackagedFile Include="C:\Users\hippi_000\Documents\GitHub\GifRenderer\TestUI\TestUI.Windows\bin\x86\Release\resources.pri">
+      <PackagePath>resources.pri</PackagePath>
+      <Modified>2014-06-01T20:07:30.015</Modified>
+    </AppxPackagedFile>
+  </ItemGroup>
+  <ItemGroup>
+    <ResolvedSDKReference Include="C:\Program Files %28x86%29\Microsoft SDKs\Windows\v8.1\ExtensionSDKs\Microsoft.VCLibs\12.0\">
+      <Name>Microsoft.VCLibs.120.00</Name>
+      <Version>12.0.21005.1</Version>
+      <Architecture>ARM</Architecture>
+      <FrameworkIdentity>Name = Microsoft.VCLibs.120.00, MinVersion = 12.0.21005.1</FrameworkIdentity>
+      <AppxLocation>C:\Program Files %28x86%29\Microsoft SDKs\Windows\v8.1\ExtensionSDKs\Microsoft.VCLibs\12.0\.\AppX\Retail\ARM\Microsoft.VCLibs.ARM.12.00.appx</AppxLocation>
+      <MoreInfo>
+      </MoreInfo>
+    </ResolvedSDKReference>
+    <ResolvedSDKReference Include="C:\Program Files %28x86%29\Microsoft SDKs\Windows\v8.1\ExtensionSDKs\Microsoft.VCLibs\12.0\">
+      <Name>Microsoft.VCLibs.120.00</Name>
+      <Version>12.0.21005.1</Version>
+      <Architecture>x64</Architecture>
+      <FrameworkIdentity>Name = Microsoft.VCLibs.120.00, MinVersion = 12.0.21005.1</FrameworkIdentity>
+      <AppxLocation>C:\Program Files %28x86%29\Microsoft SDKs\Windows\v8.1\ExtensionSDKs\Microsoft.VCLibs\12.0\.\AppX\Retail\x64\Microsoft.VCLibs.x64.12.00.appx</AppxLocation>
+      <MoreInfo>
+      </MoreInfo>
+    </ResolvedSDKReference>
+    <ResolvedSDKReference Include="C:\Program Files %28x86%29\Microsoft SDKs\Windows\v8.1\ExtensionSDKs\Microsoft.VCLibs\12.0\">
+      <Name>Microsoft.VCLibs.120.00</Name>
+      <Version>12.0.21005.1</Version>
+      <Architecture>x86</Architecture>
+      <FrameworkIdentity>Name = Microsoft.VCLibs.120.00, MinVersion = 12.0.21005.1</FrameworkIdentity>
+      <AppxLocation>C:\Program Files %28x86%29\Microsoft SDKs\Windows\v8.1\ExtensionSDKs\Microsoft.VCLibs\12.0\.\AppX\Retail\x86\Microsoft.VCLibs.x86.12.00.appx</AppxLocation>
+      <MoreInfo>
+      </MoreInfo>
+    </ResolvedSDKReference>
+  </ItemGroup>
+</Project>

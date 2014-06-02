@@ -1,0 +1,2 @@
+C:\Users\greenej\Documents\GitHub\GifRenderer\GifRenderer\GifRenderer.Windows\GifRenderer.Windows.vcxproj;x86
+C:\Users\greenej\Documents\GitHub\GifRenderer\GifRenderer\TestUI\TestUI.Windows\TestUI.Windows.csproj;x86
