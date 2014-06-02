@@ -1046,7 +1046,8 @@ DGifBufferedInput(GifFileType *GifFile, GifByteType *Buf, GifByteType *NextByte)
 
     return GIF_OK;
 }
-
+extern void
+FreeLastSavedImage(GifFileType *GifFile);
 /******************************************************************************
  This routine reads an entire GIF into core, hanging all its state info off
  the GifFileType pointer.  Call DGifOpenFileName() or DGifOpenFileHandle()
@@ -1068,6 +1069,24 @@ DGifSlurp(GifFileType *GifFile)
 		}
 	};
 
+	struct revertImageHelper
+	{
+	private:
+		GifFileType *_gifFile;
+		int _imageCount;
+		bool _done;
+	public:
+		revertImageHelper(GifFileType* gifFile) : _gifFile(gifFile), _imageCount(gifFile->ImageCount), _done(false) {}
+		void markDone() { _done = true; }
+		~revertImageHelper()
+		{
+			if (!_done && _gifFile->ImageCount > _imageCount)
+			{
+				FreeLastSavedImage(_gifFile);
+			}
+		}
+	};
+
     size_t ImageSize;
     GifRecordType RecordType;
     SavedImage *sp;
@@ -1081,60 +1100,65 @@ DGifSlurp(GifFileType *GifFile)
             return (GIF_ERROR);
 
         switch (RecordType) {
-          case IMAGE_DESC_RECORD_TYPE:
-              if (DGifGetImageDesc(GifFile) == GIF_ERROR)
-                  return (GIF_ERROR);
+		case IMAGE_DESC_RECORD_TYPE:
+		{
+			revertImageHelper imageRevertHelper(GifFile);
+			if (DGifGetImageDesc(GifFile) == GIF_ERROR)
+				return (GIF_ERROR);
 
-              sp = &GifFile->SavedImages[GifFile->ImageCount - 1];
-              /* Allocate memory for the image */
-              if (sp->ImageDesc.Width < 0 && sp->ImageDesc.Height < 0 &&
-                      sp->ImageDesc.Width > (INT_MAX / sp->ImageDesc.Height)) {
-                  return GIF_ERROR;
-              }
-              ImageSize = sp->ImageDesc.Width * sp->ImageDesc.Height;
+			sp = &GifFile->SavedImages[GifFile->ImageCount - 1];
+			/* Allocate memory for the image */
+			if (sp->ImageDesc.Width < 0 && sp->ImageDesc.Height < 0 &&
+				sp->ImageDesc.Width >(INT_MAX / sp->ImageDesc.Height)) {
+				return GIF_ERROR;
+			}
+			ImageSize = sp->ImageDesc.Width * sp->ImageDesc.Height;
 
-              if (ImageSize > (SIZE_MAX / sizeof(GifPixelType))) {
-                  return GIF_ERROR;
-              }
-              sp->RasterBits = (unsigned char *)malloc(ImageSize *
-                      sizeof(GifPixelType));
+			if (ImageSize >(SIZE_MAX / sizeof(GifPixelType))) {
+				return GIF_ERROR;
+			}
+			sp->RasterBits = (unsigned char *)malloc(ImageSize *
+				sizeof(GifPixelType));
 
-              if (sp->RasterBits == NULL) {
-                  return GIF_ERROR;
-              }
+			if (sp->RasterBits == NULL) {
+				return GIF_ERROR;
+			}
 
-	      if (sp->ImageDesc.Interlace) {
-		  int i, j;
-		   /* 
-		    * The way an interlaced image should be read - 
-		    * offsets and jumps...
-		    */
-		  int InterlacedOffset[] = { 0, 4, 2, 1 };
-		  int InterlacedJumps[] = { 8, 8, 4, 2 };
-		  /* Need to perform 4 passes on the image */
-		  for (i = 0; i < 4; i++)
-		      for (j = InterlacedOffset[i]; 
-			   j < sp->ImageDesc.Height;
-			   j += InterlacedJumps[i]) {
-			  if (DGifGetLine(GifFile, 
-					  sp->RasterBits+j*sp->ImageDesc.Width, 
-					  sp->ImageDesc.Width) == GIF_ERROR)
-			      return GIF_ERROR;
-		      }
-	      }
-	      else {
-		  if (DGifGetLine(GifFile,sp->RasterBits,ImageSize)==GIF_ERROR)
-		      return (GIF_ERROR);
-	      }
+			if (sp->ImageDesc.Interlace) {
+				int i, j;
+				/*
+				 * The way an interlaced image should be read -
+				 * offsets and jumps...
+				 */
+				int InterlacedOffset[] = { 0, 4, 2, 1 };
+				int InterlacedJumps[] = { 8, 8, 4, 2 };
+				/* Need to perform 4 passes on the image */
+				for (i = 0; i < 4; i++)
+					for (j = InterlacedOffset[i];
+						j < sp->ImageDesc.Height;
+						j += InterlacedJumps[i]) {
+					if (DGifGetLine(GifFile,
+						sp->RasterBits + j*sp->ImageDesc.Width,
+						sp->ImageDesc.Width) == GIF_ERROR)
+						return GIF_ERROR;
+				}
+			}
+			else {
+				if (DGifGetLine(GifFile, sp->RasterBits, ImageSize) == GIF_ERROR)
+					return (GIF_ERROR);
+			}
 
-              if (GifFile->ExtensionBlocks) {
-                  sp->ExtensionBlocks = GifFile->ExtensionBlocks;
-                  sp->ExtensionBlockCount = GifFile->ExtensionBlockCount;
+			if (GifFile->ExtensionBlocks) {
+				sp->ExtensionBlocks = GifFile->ExtensionBlocks;
+				sp->ExtensionBlockCount = GifFile->ExtensionBlockCount;
 
-                  GifFile->ExtensionBlocks = NULL;
-                  GifFile->ExtensionBlockCount = 0;
-              }
-              break;
+				GifFile->ExtensionBlocks = NULL;
+				GifFile->ExtensionBlockCount = 0;
+			}
+
+			imageRevertHelper.markDone();
+			break;
+		}
 
           case EXTENSION_RECORD_TYPE:
               if (DGifGetExtension(GifFile,&ExtFunction,&ExtData) == GIF_ERROR)

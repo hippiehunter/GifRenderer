@@ -27,7 +27,6 @@ namespace GifRenderer
 		int bottom;
 		int transparentColor;
 		uint32_t delay;
-		SavedImage* imageData;
 		DISPOSAL_METHODS disposal;
 	};
 

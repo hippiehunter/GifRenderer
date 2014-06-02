@@ -27,12 +27,12 @@ namespace GifRenderer
 	private:
 		void Update();
 
-		struct VirtualSerufaceUpdatesCallback : public RuntimeClass<RuntimeClassFlags<ClassicCom>, IVirtualSurfaceUpdatesCallbackNative>
+		struct VirtualSurfaceUpdatesCallbackNative : public RuntimeClass<RuntimeClassFlags<ClassicCom>, IVirtualSurfaceUpdatesCallbackNative>
 		{
 		private:
 			GifRenderer^ _renderer;
 		public:
-			VirtualSerufaceUpdatesCallback(GifRenderer^ renderer) : _renderer(renderer) {}
+			VirtualSurfaceUpdatesCallbackNative(GifRenderer^ renderer) : _renderer(renderer) {}
 			
 			virtual HRESULT STDMETHODCALLTYPE UpdatesNeeded()
 			{
@@ -44,9 +44,9 @@ namespace GifRenderer
 		ComPtr<IVirtualSurfaceImageSourceNative> _sisNative;
 		Microsoft::WRL::ComPtr<ID2D1DeviceContext> _d2dContext;
 		Microsoft::WRL::ComPtr<ID2D1Bitmap> _renderBitmap;
-		GifLoader _gifLoader;
+		std::unique_ptr<GifLoader> _gifLoader;
 		BasicTimer^ _timer;
-		VirtualSerufaceUpdatesCallback _callback;
+		Microsoft::WRL::ComPtr<VirtualSurfaceUpdatesCallbackNative> _callback;
 		int	_currentFrame;
 		int	_lastFrame;
 		bool _startedRendering;
@@ -60,12 +60,16 @@ namespace GifRenderer
 		}
 
 	public:
-		GifRenderer(GetMoreData^ getter) : _gifLoader(getter), _callback(this)
+		GifRenderer(GetMoreData^ getter)
 		{
-			ImageSource = ref new VirtualSurfaceImageSource(_gifLoader.Width(), _gifLoader.Height());
+			_gifLoader = std::make_unique<GifLoader>(getter);
+			
+			_callback = Make<VirtualSurfaceUpdatesCallbackNative>(this);
+			ImageSource = ref new VirtualSurfaceImageSource(_gifLoader->Width(), _gifLoader->Height());
 			reinterpret_cast<IUnknown*>(ImageSource)->QueryInterface(IID_PPV_ARGS(&_sisNative));
-			_sisNative->RegisterForUpdatesNeeded(&_callback);
+			_sisNative->RegisterForUpdatesNeeded(_callback.Get());
 			_timer = ref new BasicTimer();
+			CreateDeviceResources();
 		}
 
 		property VirtualSurfaceImageSource^ ImageSource;
@@ -153,24 +157,14 @@ namespace GifRenderer
 			ThrowIfFailed(
 				_sisNative->SetDevice(dxgiDevice2.Get())
 				);
-
-			
-			D2D1_BITMAP_PROPERTIES properties;
-			properties.pixelFormat = D2D1_PIXEL_FORMAT{ DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_IGNORE };
-			D2D1_SIZE_U size = { _gifLoader.Width(), _gifLoader.Height() };
-			ThrowIfFailed(_d2dContext->CreateBitmap(size, properties, &_renderBitmap));
 		}
-		void GifRenderer::BeginDraw(Windows::Foundation::Rect updateRect)
+		void GifRenderer::BeginDraw(POINT& offset)
 		{
-			POINT offset;
 			ComPtr<IDXGISurface> surface;
 
 			// Express target area as a native RECT type.
 			RECT updateRectNative;
-			updateRectNative.left = static_cast<LONG>(updateRect.Left);
-			updateRectNative.top = static_cast<LONG>(updateRect.Top);
-			updateRectNative.right = static_cast<LONG>(updateRect.Right);
-			updateRectNative.bottom = static_cast<LONG>(updateRect.Bottom);
+			_sisNative->GetVisibleBounds(&updateRectNative);
 
 			// Begin drawing - returns a target surface and an offset to use as the top left origin when drawing.
 			HRESULT beginDrawHR = _sisNative->BeginDraw(updateRectNative, &surface, &offset);
@@ -179,7 +173,7 @@ namespace GifRenderer
 			{
 				// If the device has been removed or reset, attempt to recreate it and continue drawing.
 				CreateDeviceResources();
-				BeginDraw(updateRect);
+				BeginDraw(offset);
 			}
 			else
 			{
@@ -205,32 +199,31 @@ namespace GifRenderer
 
 			// Begin drawing using D2D context.
 			_d2dContext->BeginDraw();
-
 			// Apply a clip and transform to constrain updates to the target update area.
 			// This is required to ensure coordinates within the target surface remain
 			// consistent by taking into account the offset returned by BeginDraw, and
 			// can also improve performance by optimizing the area that is drawn by D2D.
 			// Apps should always account for the offset output parameter returned by 
 			// BeginDraw, since it may not match the passed updateRect input parameter's location.
+			
+			
 			_d2dContext->PushAxisAlignedClip(
 				D2D1::RectF(
 				static_cast<float>(offset.x),
 				static_cast<float>(offset.y),
-				static_cast<float>(offset.x + updateRect.Width),
-				static_cast<float>(offset.y + updateRect.Height)
+				static_cast<float>(offset.x + (updateRectNative.right - updateRectNative.left)),
+				static_cast<float>((offset.y) + (updateRectNative.bottom - updateRectNative.top))
 				),
 				D2D1_ANTIALIAS_MODE_ALIASED
 				);
 
 			_d2dContext->SetTransform(
 				D2D1::Matrix3x2F::Translation(
-				static_cast<float>(offset.x),
-				static_cast<float>(offset.y)
+				static_cast<float>(offset.x - updateRectNative.left),
+				static_cast<float>((offset.y) - updateRectNative.top)
 				)
 				);
 		}
-
-		void BeginDraw()    { BeginDraw(Windows::Foundation::Rect(0, 0, (float)_gifLoader.Width(), (float)_gifLoader.Height())); }
 
 		void GifRenderer::EndDraw()
 		{
@@ -258,10 +251,10 @@ namespace GifRenderer
 			int i = 0;
 			for (; accountedFor < msDelta; i++)
 			{
-				if (i >= _gifLoader.FrameCount())
+				if (i >= _gifLoader->FrameCount())
 					i = 0;
 
-				accountedFor += _gifLoader.GetFrameDelay(i);
+				accountedFor += _gifLoader->GetFrameDelay(i);
 			}
 			auto newFrame = max(i - 1, 0);
 			if (newFrame != _currentFrame || _currentFrame == 0)
@@ -285,26 +278,55 @@ namespace GifRenderer
 
 	void GifRenderer::Update()
 	{
-		if (!_startedRendering)
-			_timer->Reset();
-		else
-			_timer->Update();
-
-		if (Update(_timer->Total, _timer->Delta))
+		try
 		{
-			D2D1_RECT_U rect = { 0, 0, _gifLoader.Width(), _gifLoader.Height() };
-			D2D1_RECT_F rectf = { 0, 0, _gifLoader.Width(), _gifLoader.Height() };
-			auto& renderedData = _gifLoader.GetFrame(_lastFrame, _currentFrame);
-			_renderBitmap->CopyFromMemory(&rect, renderedData.get(), _gifLoader.Width() * 4);
+			if (!_gifLoader->IsLoaded())
+				_gifLoader->LoadMore();
 
-			BeginDraw();
-			_d2dContext->DrawBitmap(_renderBitmap.Get(), &rectf);
-			_d2dContext->SetTransform(D2D1::IdentityMatrix());
-			_d2dContext->PopAxisAlignedClip();
-			EndDraw();
+			if (_gifLoader->FrameCount() > 0)
+			{
+
+				if (!_startedRendering)
+					_timer->Reset();
+				else
+					_timer->Update();
+
+				if (Update(_timer->Total, _timer->Delta))
+				{
+					RECT visibleBounds;
+					_sisNative->GetVisibleBounds(&visibleBounds);
+					D2D1_RECT_U rect = { 0, 0, _gifLoader->Width(), _gifLoader->Height() };
+					
+
+					auto& renderedData = _gifLoader->GetFrame(_lastFrame, _currentFrame);
+					_lastFrame = _currentFrame;
+
+					D2D1_BITMAP_PROPERTIES properties;
+					properties.pixelFormat = D2D1_PIXEL_FORMAT{ DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_IGNORE };
+					properties.dpiX = Windows::Graphics::Display::DisplayProperties::LogicalDpi;
+					properties.dpiY = Windows::Graphics::Display::DisplayProperties::LogicalDpi;
+					D2D1_SIZE_U size = { _gifLoader->Width(), _gifLoader->Height() };
+					ThrowIfFailed(_d2dContext->CreateBitmap(size, renderedData.get(), _gifLoader->Width() * 4, properties, _renderBitmap.ReleaseAndGetAddressOf()));
+					POINT offset;
+					BeginDraw(offset);
+					D2D1_RECT_F rectf;
+					rectf.left = (float)(visibleBounds.left);
+					rectf.right = (float)(visibleBounds.right);
+					rectf.top = (float)(visibleBounds.top);
+					rectf.bottom = (float)(visibleBounds.bottom);
+					
+					_d2dContext->Clear(D2D1::ColorF(D2D1::ColorF::White));
+					_d2dContext->DrawBitmap(_renderBitmap.Get());
+					_d2dContext->SetTransform(D2D1::IdentityMatrix());
+					_d2dContext->PopAxisAlignedClip();
+					_d2dContext->Flush();
+					EndDraw();
+				}
+			}
 		}
+		catch (...) { }
 
-		RECT invalidateRect{ 0, 0, _gifLoader.Width(), _gifLoader.Height() };
+		RECT invalidateRect{ 0, 0, 1, 1 };
 		_sisNative->Invalidate(invalidateRect);
 	}
 }

@@ -34,7 +34,7 @@ typedef unsigned int GifPrefixType;
 typedef int GifWord;
 
 typedef struct GifColorType {
-    GifByteType Red, Green, Blue;
+    GifByteType Blue, Green, Red, Alpha;
 } GifColorType;
 
 typedef struct ColorMapObject {

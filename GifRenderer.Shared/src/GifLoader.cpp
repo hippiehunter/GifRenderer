@@ -66,16 +66,15 @@ void mapRasterBits(uint8_t* rasterBits, std::unique_ptr<uint32_t[]>& targetFrame
 			if (transparencyColor == -1 ||
 				transparencyColor != index)
 			{
-				auto& gifColor = colorMap->Colors[index];
-				bgraColor color = { gifColor.Blue, gifColor.Green, gifColor.Red, (uint8_t)255 };
-				memcpy(targetFrame.get() + offset, &color, 4);
+				auto colorTarget = reinterpret_cast<GifColorType*>(targetFrame.get() + offset);
+				*colorTarget = colorMap->Colors[index];
 			}
 			i++;
 		}
 	}
 }
 
-void loadGifFrame(GifFileType* gifFile, GifFrame& frame, std::unique_ptr<uint32_t[]>& buffer, int currentFrame, int targetFrame)
+void loadGifFrame(GifFileType* gifFile, const std::vector<GifFrame>& frames, std::unique_ptr<uint32_t[]>& buffer, int currentFrame, int targetFrame)
 {
 	uint32_t width = gifFile->SWidth;
 	uint32_t height = gifFile->SHeight;
@@ -121,9 +120,10 @@ void loadGifFrame(GifFileType* gifFile, GifFrame& frame, std::unique_ptr<uint32_
 
 	for (int i = currentFrame; i < gifFile->ImageCount && i <= targetFrame; i++)
 	{
-		auto decodeFrame = frame.imageData;
+		auto& frame = frames[i];
+		auto decodeFrame = gifFile->SavedImages[i];
 		auto disposal = frame.disposal;
-		auto colorMap = (decodeFrame->ImageDesc.ColorMap != nullptr ? decodeFrame->ImageDesc.ColorMap : (gifFile->SColorMap != nullptr ? gifFile->SColorMap : nullptr));
+		auto colorMap = (decodeFrame.ImageDesc.ColorMap != nullptr ? decodeFrame.ImageDesc.ColorMap : (gifFile->SColorMap != nullptr ? gifFile->SColorMap : nullptr));
 
 		if (disposal == DISPOSAL_METHODS::DM_PREVIOUS)
 		{
@@ -133,7 +133,7 @@ void loadGifFrame(GifFileType* gifFile, GifFrame& frame, std::unique_ptr<uint32_
 			memcpy(lastFrame.get(), buffer.get(), width * height * sizeof(uint32_t));
 		}
 
-		mapRasterBits(decodeFrame->RasterBits, buffer, colorMap, frame.top, frame.left, frame.bottom, frame.right, width, frame.transparentColor);
+		mapRasterBits(decodeFrame.RasterBits, buffer, colorMap, frame.top, frame.left, frame.bottom, frame.right, width, frame.transparentColor);
 
 		switch (disposal)
 		{
@@ -202,7 +202,6 @@ void loadGifFrames(GifFileType* gifFile, std::vector<GifFrame>& frames)
 		frame.bottom = bottom;
 		frame.right = right;
 		frame.left = left;
-		frame.imageData = gifFile->SavedImages + i;
 		frame.disposal = disposal;
 	}
 }
@@ -222,6 +221,7 @@ GifLoader::GifLoader(GetMoreData^ getter)
 		gifFile->SHeight = height;
 		gifFile->SWidth = width;
 		_gifFile = gifFile;
+		loadGifFrames(_gifFile, _frames);
 	}
 	else
 	{
@@ -241,6 +241,7 @@ bool GifLoader::LoadMore()
 {
 	if (DGifSlurp(_gifFile) == GIF_OK)
 	{
+		loadGifFrames(_gifFile, _frames);
 		_isLoaded = true;
 	}
 	else
@@ -248,7 +249,10 @@ bool GifLoader::LoadMore()
 		if (_loaderData.getter == nullptr)
 			return false;
 		else
+		{
+			loadGifFrames(_gifFile, _frames);
 			return true;
+		}
 	}
 }
 uint32_t GifLoader::GetFrameDelay(size_t index) const { return _frames[index].delay; }
@@ -258,7 +262,6 @@ size_t GifLoader::FrameCount() const{ return _gifFile->ImageCount; }
 
 std::unique_ptr<uint32_t[]>& GifLoader::GetFrame(size_t currentIndex, size_t targetIndex)
 {
-	auto& frame = _frames[targetIndex];
-	loadGifFrame(_gifFile, frame, _renderBuffer, currentIndex, targetIndex);
+	loadGifFrame(_gifFile, _frames, _renderBuffer, currentIndex, targetIndex);
 	return _renderBuffer;
 }
