@@ -12,6 +12,7 @@
 #include "BasicTimer.h"
 
 using Windows::UI::Xaml::Media::Imaging::VirtualSurfaceImageSource;
+using Windows::Graphics::Display::DisplayInformation;
 using namespace Microsoft::WRL;
 
 namespace GifRenderer
@@ -47,6 +48,7 @@ namespace GifRenderer
 		std::unique_ptr<GifLoader> _gifLoader;
 		BasicTimer^ _timer;
 		Microsoft::WRL::ComPtr<VirtualSurfaceUpdatesCallbackNative> _callback;
+		DisplayInformation^ _displayInfo;
 		int	_currentFrame;
 		int	_lastFrame;
 		bool _startedRendering;
@@ -63,13 +65,14 @@ namespace GifRenderer
 		GifRenderer(GetMoreData^ getter)
 		{
 			_gifLoader = std::make_unique<GifLoader>(getter);
-			
+			_displayInfo = DisplayInformation::GetForCurrentView();
 			_callback = Make<VirtualSurfaceUpdatesCallbackNative>(this);
 			ImageSource = ref new VirtualSurfaceImageSource(_gifLoader->Width(), _gifLoader->Height());
 			reinterpret_cast<IUnknown*>(ImageSource)->QueryInterface(IID_PPV_ARGS(&_sisNative));
 			_sisNative->RegisterForUpdatesNeeded(_callback.Get());
 			_timer = ref new BasicTimer();
 			CreateDeviceResources();
+			
 		}
 
 		property VirtualSurfaceImageSource^ ImageSource;
@@ -145,7 +148,7 @@ namespace GifRenderer
 				);
 
 			// Set DPI to the display's current DPI.
-			_d2dContext->SetDpi(Windows::Graphics::Display::DisplayProperties::LogicalDpi, Windows::Graphics::Display::DisplayProperties::LogicalDpi);
+			_d2dContext->SetDpi(_displayInfo->RawDpiX, _displayInfo->RawDpiY);
 
 			// Get the Direct3D 11.1 API device.
 			ComPtr<IDXGIDevice> dxgiDevice2;
@@ -206,7 +209,8 @@ namespace GifRenderer
 			// Apps should always account for the offset output parameter returned by 
 			// BeginDraw, since it may not match the passed updateRect input parameter's location.
 			
-			
+			_d2dContext->SetUnitMode(D2D1_UNIT_MODE::D2D1_UNIT_MODE_PIXELS);
+
 			_d2dContext->PushAxisAlignedClip(
 				D2D1::RectF(
 				static_cast<float>(offset.x),
@@ -303,18 +307,12 @@ namespace GifRenderer
 
 					D2D1_BITMAP_PROPERTIES properties;
 					properties.pixelFormat = D2D1_PIXEL_FORMAT{ DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_IGNORE };
-					properties.dpiX = Windows::Graphics::Display::DisplayProperties::LogicalDpi;
-					properties.dpiY = Windows::Graphics::Display::DisplayProperties::LogicalDpi;
+					properties.dpiX = _displayInfo->RawDpiX;
+					properties.dpiY = _displayInfo->RawDpiY;
 					D2D1_SIZE_U size = { _gifLoader->Width(), _gifLoader->Height() };
 					ThrowIfFailed(_d2dContext->CreateBitmap(size, renderedData.get(), _gifLoader->Width() * 4, properties, _renderBitmap.ReleaseAndGetAddressOf()));
 					POINT offset;
 					BeginDraw(offset);
-					D2D1_RECT_F rectf;
-					rectf.left = (float)(visibleBounds.left);
-					rectf.right = (float)(visibleBounds.right);
-					rectf.top = (float)(visibleBounds.top);
-					rectf.bottom = (float)(visibleBounds.bottom);
-					
 					_d2dContext->Clear(D2D1::ColorF(D2D1::ColorF::White));
 					_d2dContext->DrawBitmap(_renderBitmap.Get());
 					_d2dContext->SetTransform(D2D1::IdentityMatrix());
