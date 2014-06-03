@@ -4,6 +4,7 @@
 
 #include <dxgi.h>
 #include <dxgi1_2.h>
+#include <dxgi1_3.h>
 #include <d2d1_1.h>
 #include <d3d11_1.h>
 #include "windows.ui.xaml.media.dxinterop.h"
@@ -13,6 +14,9 @@
 
 using Windows::UI::Xaml::Media::Imaging::VirtualSurfaceImageSource;
 using Windows::Graphics::Display::DisplayInformation;
+using Windows::UI::Xaml::Application;
+using Windows::UI::Xaml::SuspendingEventHandler;
+using Windows::ApplicationModel::SuspendingEventArgs;
 using namespace Microsoft::WRL;
 
 namespace GifRenderer
@@ -49,9 +53,12 @@ namespace GifRenderer
 		BasicTimer^ _timer;
 		Microsoft::WRL::ComPtr<VirtualSurfaceUpdatesCallbackNative> _callback;
 		DisplayInformation^ _displayInfo;
+		Windows::Foundation::EventRegistrationToken _suspendingCookie;
+		Windows::Foundation::EventRegistrationToken _resumingCookie;
 		int	_currentFrame;
 		int	_lastFrame;
 		bool _startedRendering;
+		bool _suspended;
 
 		inline void ThrowIfFailed(HRESULT hr)
 		{
@@ -72,11 +79,46 @@ namespace GifRenderer
 			_sisNative->RegisterForUpdatesNeeded(_callback.Get());
 			_timer = ref new BasicTimer();
 			CreateDeviceResources();
-			
+			_suspendingCookie = (Application::Current->Suspending += ref new SuspendingEventHandler(this, &GifRenderer::OnSuspending));
+			_resumingCookie = (Application::Current->Resuming += ref new Windows::Foundation::EventHandler<Object^>(this, &GifRenderer::OnResuming));
+		}
+
+		void OnSuspending(Object ^sender, SuspendingEventArgs ^e)
+		{
+			_suspended = true;
+
+			_renderBitmap = nullptr;
+			_d2dContext = nullptr;
+
+			if (g_d3dDevice != nullptr)
+			{
+				ComPtr<IDXGIDevice3> dxgiDevice;
+				g_d3dDevice.As(&dxgiDevice);
+
+				// Hints to the driver that the app is entering an idle state and that its memory can be used temporarily for other apps.
+				dxgiDevice->Trim();
+				g_d3dDevice = nullptr;
+			}
+
+		}
+
+		void OnResuming(Object ^sender, Object ^e)
+		{
+			_suspended = false;
+			_startedRendering = false;
+
+			RECT invalidateRect{ 0, 0, 1, 1 };
+			_sisNative->Invalidate(invalidateRect);
 		}
 
 		property VirtualSurfaceImageSource^ ImageSource;
 
+		virtual ~GifRenderer()
+		{
+			
+			Application::Current->Suspending -= _suspendingCookie;
+			Application::Current->Resuming -= _resumingCookie;
+		}
 		
 	private:
 
@@ -310,6 +352,10 @@ namespace GifRenderer
 					properties.dpiX = _displayInfo->RawDpiX;
 					properties.dpiY = _displayInfo->RawDpiY;
 					D2D1_SIZE_U size = { _gifLoader->Width(), _gifLoader->Height() };
+
+					if (_d2dContext == nullptr)
+						CreateDeviceResources();
+
 					ThrowIfFailed(_d2dContext->CreateBitmap(size, renderedData.get(), _gifLoader->Width() * 4, properties, _renderBitmap.ReleaseAndGetAddressOf()));
 					POINT offset;
 					BeginDraw(offset);
@@ -324,7 +370,10 @@ namespace GifRenderer
 		}
 		catch (...) { }
 
-		RECT invalidateRect{ 0, 0, 1, 1 };
-		_sisNative->Invalidate(invalidateRect);
+		if (!_suspended)
+		{
+			RECT invalidateRect{ 0, 0, 1, 1 };
+			_sisNative->Invalidate(invalidateRect);
+		}
 	}
 }

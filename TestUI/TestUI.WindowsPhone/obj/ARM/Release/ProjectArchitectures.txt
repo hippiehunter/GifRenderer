@@ -1,2 +1,0 @@
-C:\Users\hippi_000\Documents\GitHub\GifRenderer\GifRenderer.WindowsPhone\GifRenderer.WindowsPhone.vcxproj;arm
-C:\Users\hippi_000\Documents\GitHub\GifRenderer\TestUI\TestUI.WindowsPhone\TestUI.WindowsPhone.csproj;arm

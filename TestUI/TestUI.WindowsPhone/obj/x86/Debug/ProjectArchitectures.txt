@@ -1,2 +1,0 @@
-C:\Users\greenej\Documents\GitHub\GifRenderer\GifRenderer\GifRenderer.WindowsPhone\GifRenderer.WindowsPhone.vcxproj;x86
-C:\Users\greenej\Documents\GitHub\GifRenderer\GifRenderer\TestUI\TestUI.WindowsPhone\TestUI.WindowsPhone.csproj;x86
