@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2013/01/nuspec.xsd">
+    <metadata minClientVersion="2.5">
+        <id>GifRenderer</id>
+        <version>1.0.0.0</version>
+        <authors>HippieHunter</authors>
+		<projectUrl>http://www.github.com/HippieHunter/GifRenderer</projectUrl>
+        <requireLicenseAcceptance>false</requireLicenseAcceptance>
+        <description>Loads and renders animated gifs on Windows 8.1 and Windows Phone 8.1 Appx</description>
+        <tags>markdown reddit windowsphone windowsstore xaml</tags>
+    </metadata>
+    <files>
+		<file src="nuget_build\_._" target="lib\wpa81\_._" />
+		<file src="nuget_build\_._" target="lib\win81\_._" />
+		<file src="Release\GifRenderer.WindowsPhone\GifRenderer.winmd" target="build\wpa81\GifRenderer.winmd" />
+		<file src="Release\GifRenderer.WindowsPhone\GifRenderer.WindowsPhone.dll" target="build\wpa81\GifRenderer.WindowsPhone.dll" />
+		
+		<file src="Release\GifRenderer.WindowsPhone\GifRenderer.WindowsPhone.dll" target="build\wpa81\x86\GifRenderer.WindowsPhone.dll" />
+		<file src="Release\GifRenderer.WindowsPhone\GifRenderer.WindowsPhone.pdb" target="build\wpa81\x86\GifRenderer.WindowsPhone.pdb" />
+		
+		<file src="arm\Release\GifRenderer.WindowsPhone\GifRenderer.WindowsPhone.dll" target="build\wpa81\arm\GifRenderer.WindowsPhone.dll" />
+		<file src="arm\Release\GifRenderer.WindowsPhone\GifRenderer.WindowsPhone.pdb" target="build\wpa81\arm\GifRenderer.WindowsPhone.pdb" />
+		
+		<file src="Release\GifRenderer.Windows\GifRenderer.winmd" target="build\win81\GifRenderer.winmd" />
+		<file src="Release\GifRenderer.Windows\GifRenderer.Windows.dll" target="build\win81\GifRenderer.Windows.dll" />
+		
+		<file src="arm\Release\GifRenderer.Windows\GifRenderer.Windows.dll" target="build\win81\arm\GifRenderer.Windows.dll" />
+		<file src="arm\Release\GifRenderer.Windows\GifRenderer.Windows.pdb" target="build\win81\arm\GifRenderer.Windows.pdb" />
+		
+		<file src="Release\GifRenderer.Windows\GifRenderer.Windows.dll" target="build\win81\x86\GifRenderer.Windows.dll" />
+		<file src="Release\GifRenderer.Windows\GifRenderer.Windows.pdb" target="build\win81\x86\GifRenderer.Windows.pdb" />
+		
+		<file src="x64\Release\GifRenderer.Windows\GifRenderer.Windows.dll" target="build\win81\x64\GifRenderer.Windows.dll" />
+		<file src="x64\Release\GifRenderer.Windows\GifRenderer.Windows.pdb" target="build\win81\x64\GifRenderer.Windows.pdb" />
+		
+		<file src="nuget_build\wpa81\GifRenderer.targets" target="build\wpa81\GifRenderer.targets" />
+		<file src="nuget_build\win81\GifRenderer.targets" target="build\win81\GifRenderer.targets" />
+	</files>
+</package>
