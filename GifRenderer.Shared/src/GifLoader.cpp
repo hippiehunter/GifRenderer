@@ -243,6 +243,10 @@ bool GifLoader::LoadMore()
 	{
 		loadGifFrames(_gifFile, _frames);
 		_isLoaded = true;
+    _loaderData.buffer.clear();
+    _loaderData.getter = nullptr;
+    _loaderData.position = 0;
+    _loaderData.revertPosition = 0;
 		return false;
 	}
 	else

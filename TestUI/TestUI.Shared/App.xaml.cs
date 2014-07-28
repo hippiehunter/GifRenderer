@@ -36,8 +36,10 @@ namespace TestUI
         public App()
         {
             this.InitializeComponent();
-            this.Suspending += this.OnSuspending;
+			eventHandler = this.OnSuspending;
+			this.Suspending += eventHandler;
         }
+		SuspendingEventHandler eventHandler;
 
         /// <summary>
         /// Invoked when the application is launched normally by the end user.  Other entry points
@@ -126,6 +128,10 @@ namespace TestUI
         /// </summary>
         /// <param name="sender">The source of the suspend request.</param>
         /// <param name="e">Details about the suspend request.</param>
+		protected override void OnActivated(IActivatedEventArgs args)
+		{
+			base.OnActivated(args);
+		}
         private void OnSuspending(object sender, SuspendingEventArgs e)
         {
             var deferral = e.SuspendingOperation.GetDeferral();
