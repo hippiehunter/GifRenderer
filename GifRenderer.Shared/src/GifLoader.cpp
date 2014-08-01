@@ -19,10 +19,14 @@ int istreamReader(GifFileType * gft, GifByteType * buf, int length)
 	{
 		if (egi->getter != nullptr && (egi->position == egi->buffer.size() || egi->position + length > egi->buffer.size()))
 		{
-			auto moreData = egi->getter();
-			if (moreData == nullptr)
+			Platform::Array<uint8_t>^ moreData = nullptr;
+			if (!egi->getter->Get(&moreData))
+			{
+				egi->getter->DisposeWorkaround();
 				egi->getter = nullptr;
-			else if (moreData->Length == 0)
+			}
+			
+			if (moreData->Length == 0)
 				return -1;
 			else
 			{
@@ -214,7 +218,19 @@ GifLoader::GifLoader(GetMoreData^ getter)
 	GifFileType* gifFile = DGifOpen(&_loaderData, istreamReader, &error);
 	if (gifFile != nullptr)
 	{
-		DGifSlurp(gifFile);
+		 _loaderData.revertPosition = _loaderData.position;
+		if (DGifSlurp(gifFile) == GIF_OK)
+		{
+			_isLoaded = true;
+			_loaderData.buffer.clear();
+			if (_loaderData.getter)
+			{
+				_loaderData.getter->DisposeWorkaround();
+				_loaderData.getter = nullptr;
+			}
+			_loaderData.position = 0;
+			_loaderData.revertPosition = 0;
+		}
 		uint32_t width = (gifFile->SWidth % 2) + gifFile->SWidth;
 		uint32_t height = (gifFile->SHeight % 2) + gifFile->SHeight;
 
@@ -234,9 +250,11 @@ GifLoader::~GifLoader()
 	int error = 0;
 	if (_gifFile != nullptr)
 		DGifCloseFile(_gifFile, &error);
+
+	_gifFile = nullptr;
 }
 
-bool GifLoader::IsLoaded() const { return _isLoaded; }
+bool GifLoader::IsLoaded() const { return _isLoaded || _loaderData.getter == nullptr; }
 bool GifLoader::LoadMore()
 {
 	if (DGifSlurp(_gifFile) == GIF_OK)
@@ -244,7 +262,11 @@ bool GifLoader::LoadMore()
 		loadGifFrames(_gifFile, _frames);
 		_isLoaded = true;
     _loaderData.buffer.clear();
-    _loaderData.getter = nullptr;
+		if (_loaderData.getter)
+		{
+			_loaderData.getter->DisposeWorkaround();
+			_loaderData.getter = nullptr;
+		}
     _loaderData.position = 0;
     _loaderData.revertPosition = 0;
 		return false;
@@ -263,7 +285,7 @@ bool GifLoader::LoadMore()
 uint32_t GifLoader::GetFrameDelay(size_t index) const { return _frames[index].delay; }
 uint32_t GifLoader::Height() const { return _gifFile->SHeight; }
 uint32_t GifLoader::Width() const{ return _gifFile->SWidth; }
-size_t GifLoader::FrameCount() const{ return _gifFile->ImageCount; }
+size_t GifLoader::FrameCount() const{ return _frames.size(); }
 
 std::unique_ptr<uint32_t[]>& GifLoader::GetFrame(size_t currentIndex, size_t targetIndex)
 {

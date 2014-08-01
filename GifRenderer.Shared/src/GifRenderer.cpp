@@ -37,21 +37,27 @@ namespace GifRenderer
 		private:
 			GifRenderer^ _renderer;
 		public:
+			~VirtualSurfaceUpdatesCallbackNative()
+			{
+				_renderer = nullptr;
+			}
 			VirtualSurfaceUpdatesCallbackNative(GifRenderer^ renderer) : _renderer(renderer) {}
 			
 			virtual HRESULT STDMETHODCALLTYPE UpdatesNeeded()
 			{
-				_renderer->Update();
+				if (_renderer != nullptr && !_renderer->_suspended)
+					_renderer->Update();
 				return S_OK;
 			}
 		};
 
-		ComPtr<IVirtualSurfaceImageSourceNative> _sisNative;
+		Microsoft::WRL::ComPtr<VirtualSurfaceUpdatesCallbackNative> _callback;
+		Microsoft::WRL::ComPtr<IVirtualSurfaceImageSourceNative> _sisNative;
 		Microsoft::WRL::ComPtr<ID2D1DeviceContext> _d2dContext;
 		Microsoft::WRL::ComPtr<ID2D1Bitmap> _renderBitmap;
 		std::unique_ptr<GifLoader> _gifLoader;
 		BasicTimer^ _timer;
-		Microsoft::WRL::ComPtr<VirtualSurfaceUpdatesCallbackNative> _callback;
+		VirtualSurfaceImageSource^ _imageSource;
 		DisplayInformation^ _displayInfo;
 		Windows::Foundation::EventRegistrationToken _suspendingCookie;
 		Windows::Foundation::EventRegistrationToken _resumingCookie;
@@ -73,14 +79,9 @@ namespace GifRenderer
 		{
 			_gifLoader = std::make_unique<GifLoader>(getter);
 			_displayInfo = DisplayInformation::GetForCurrentView();
-			_callback = Make<VirtualSurfaceUpdatesCallbackNative>(this);
-			ImageSource = ref new VirtualSurfaceImageSource(_gifLoader->Width(), _gifLoader->Height());
-			reinterpret_cast<IUnknown*>(ImageSource)->QueryInterface(IID_PPV_ARGS(&_sisNative));
-			_sisNative->RegisterForUpdatesNeeded(_callback.Get());
-			_timer = ref new BasicTimer();
-			CreateDeviceResources();
 			_suspendingCookie = (Application::Current->Suspending += ref new SuspendingEventHandler(this, &GifRenderer::OnSuspending));
 			_resumingCookie = (Application::Current->Resuming += ref new Windows::Foundation::EventHandler<Object^>(this, &GifRenderer::OnResuming));
+
 		}
 
 		void OnSuspending(Object ^sender, SuspendingEventArgs ^e)
@@ -111,11 +112,34 @@ namespace GifRenderer
 			_sisNative->Invalidate(invalidateRect);
 		}
 
-		property VirtualSurfaceImageSource^ ImageSource;
+		property VirtualSurfaceImageSource^ ImageSource
+		{
+			VirtualSurfaceImageSource^ get()
+			{
+				if (_imageSource == nullptr)
+				{
+					_callback = Make<VirtualSurfaceUpdatesCallbackNative>(this);
+					_imageSource = ref new VirtualSurfaceImageSource(_gifLoader->Width(), _gifLoader->Height());
+					reinterpret_cast<IUnknown*>(_imageSource)->QueryInterface(IID_PPV_ARGS(&_sisNative));
+					_sisNative->RegisterForUpdatesNeeded(_callback.Get());
+					_timer = ref new BasicTimer();
+					CreateDeviceResources();
+				}
+				return _imageSource;
+			}
+		}
 
 		virtual ~GifRenderer()
 		{
-			
+			_callback = nullptr;
+			_timer = nullptr;
+			_suspended = true;
+			_sisNative->RegisterForUpdatesNeeded(nullptr);
+			_sisNative = nullptr;
+			_callback = nullptr;
+			_gifLoader = nullptr;
+			_renderBitmap = nullptr;
+			_d2dContext = nullptr;
 			Application::Current->Suspending -= _suspendingCookie;
 			Application::Current->Resuming -= _resumingCookie;
 		}
@@ -298,7 +322,12 @@ namespace GifRenderer
 			for (; accountedFor < msDelta; i++)
 			{
 				if (i >= _gifLoader->FrameCount())
-					i = 0;
+				{
+					if (_gifLoader->IsLoaded())
+						i = 0;
+					else
+						i = _gifLoader->FrameCount() - 1;
+				}
 
 				accountedFor += _gifLoader->GetFrameDelay(i);
 			}
@@ -317,7 +346,7 @@ namespace GifRenderer
 					return true;
 				}
 				else
-					return false;
+					return true;
 			}
 		}
 	};
@@ -372,8 +401,9 @@ namespace GifRenderer
 
 		if (!_suspended)
 		{
-			RECT invalidateRect{ 0, 0, 1, 1 };
-			_sisNative->Invalidate(invalidateRect);
+			RECT visibleBounds;
+			_sisNative->GetVisibleBounds(&visibleBounds);
+			_sisNative->Invalidate(visibleBounds);
 		}
 	}
 }

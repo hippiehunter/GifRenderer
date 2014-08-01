@@ -7,8 +7,13 @@
 
 namespace GifRenderer
 {
-	//returns empty array when there is remaining data to be transmitted, returns nullptr for end of file
-	public delegate Platform::Array<uint8_t>^ GetMoreData();
+	public interface class GetMoreData
+	{
+	public:
+		bool Get(Platform::Array<uint8_t>^* data);
+		void DisposeWorkaround();
+	};
+
 	enum DISPOSAL_METHODS
 	{
 		DM_UNDEFINED = 0,

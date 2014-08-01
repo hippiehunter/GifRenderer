@@ -47,6 +47,27 @@ namespace TestUI
             // this event is handled for you.
         }
 
+        private delegate bool GetterDelegate(out byte[] data);
+        private class Getter : GifRenderer.GetMoreData
+        {
+            public Getter(GetterDelegate del)
+            {
+                _del = del;
+            }
+            GetterDelegate _del;
+
+
+            public bool Get(out byte[] data)
+            {
+                return _del(out data);
+            }
+
+            public void DisposeWorkaround()
+            {
+                _del = null;
+            }
+        }
+
 		private async void Button_Click(object sender, RoutedEventArgs e)
 		{
 			HttpClient client = new HttpClient();
@@ -60,26 +81,27 @@ namespace TestUI
 			memoryStream.Write(initialBuffer, 0, initialReadLength);
 			long returnedPosition = 0;
 			bool finished = false;
-			GifRenderer.GetMoreData getter = () =>
+			GifRenderer.GetMoreData getter = new Getter((out byte[] result) =>
 			{
+                result = null;
 				//its over
 				if (finished && returnedPosition == memoryStream.Length)
-					return null;
+					return false;
 
 				if (returnedPosition < memoryStream.Length)
 				{
 					lock(memoryStream)
 					{
-						var result = new byte[memoryStream.Length - returnedPosition];
+						result = new byte[memoryStream.Length - returnedPosition];
 						memoryStream.Seek(returnedPosition, SeekOrigin.Begin);
 						memoryStream.Read(result, 0, result.Length);
 						returnedPosition += result.Length;
-						return result;
+						return true;
 					}
 				}
 				else
-					return new byte[0];
-			};
+					return true;
+			});
 			Task.Run(async () =>
 				{
 					try
@@ -127,26 +149,27 @@ namespace TestUI
 			memoryStream.Write(initialBuffer, 0, initialReadLength);
 			long returnedPosition = 0;
 			bool finished = false;
-			GifRenderer.GetMoreData getter = () =>
-			{
-				//its over
-				if (finished && returnedPosition == memoryStream.Length)
-					return null;
+            GifRenderer.GetMoreData getter = new Getter((out byte[] result) =>
+            {
+                result = null;
+                //its over
+                if (finished && returnedPosition == memoryStream.Length)
+                    return false;
 
-				if (returnedPosition < memoryStream.Length)
-				{
-					lock (memoryStream)
-					{
-						var result = new byte[memoryStream.Length - returnedPosition];
-						memoryStream.Seek(returnedPosition, SeekOrigin.Begin);
-						memoryStream.Read(result, 0, result.Length);
-						returnedPosition += result.Length;
-						return result;
-					}
-				}
-				else
-					return new byte[0];
-			};
+                if (returnedPosition < memoryStream.Length)
+                {
+                    lock (memoryStream)
+                    {
+                        result = new byte[memoryStream.Length - returnedPosition];
+                        memoryStream.Seek(returnedPosition, SeekOrigin.Begin);
+                        memoryStream.Read(result, 0, result.Length);
+                        returnedPosition += result.Length;
+                        return true;
+                    }
+                }
+                else
+                    return true;
+            });
 			Task.Run(async () =>
 			{
 				try
