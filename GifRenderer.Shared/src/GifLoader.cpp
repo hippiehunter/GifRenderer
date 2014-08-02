@@ -208,6 +208,8 @@ void loadGifFrames(GifFileType* gifFile, std::vector<GifFrame>& frames)
 		frame.left = left;
 		frame.disposal = disposal;
 	}
+	if (frames.size() != gifFile->ImageCount)
+		throw ref new Platform::InvalidArgumentException("image count didnt match frame size");
 }
 
 GifLoader::GifLoader(GetMoreData^ getter)
@@ -285,7 +287,12 @@ bool GifLoader::LoadMore()
 uint32_t GifLoader::GetFrameDelay(size_t index) const { return _frames[index].delay; }
 uint32_t GifLoader::Height() const { return _gifFile->SHeight; }
 uint32_t GifLoader::Width() const{ return _gifFile->SWidth; }
-size_t GifLoader::FrameCount() const{ return _frames.size(); }
+size_t GifLoader::FrameCount() const
+{
+	if (_frames.size() != _gifFile->ImageCount)
+		throw ref new Platform::InvalidArgumentException("image count didnt match frame size");
+	return _frames.size(); 
+}
 
 std::unique_ptr<uint32_t[]>& GifLoader::GetFrame(size_t currentIndex, size_t targetIndex)
 {
