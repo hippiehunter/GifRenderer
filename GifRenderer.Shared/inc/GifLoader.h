@@ -39,11 +39,13 @@ namespace GifRenderer
 	{
 		int position;
 		std::vector<uint8_t> buffer;
-		GetMoreData^ getter;
-		int revertPosition;
+		Windows::Storage::Streams::IDataReader^ reader;
+		Windows::Storage::Streams::DataReaderLoadOperation^ loadOperation;
+		bool finishedLoad;
+		bool finishedData;
 	};
 
-	class GifLoader
+	private ref class GifLoader
 	{
 	private:
 		gif_user_data _loaderData;
@@ -52,7 +54,7 @@ namespace GifRenderer
 		std::vector<GifFrame> _frames;
 		std::unique_ptr<uint32_t[]> _renderBuffer;
 	public:
-		GifLoader(GetMoreData^ getter);
+		GifLoader(Windows::Storage::Streams::IDataReader^ reader);
 		~GifLoader();
 
 		bool IsLoaded() const;
@@ -62,7 +64,7 @@ namespace GifRenderer
 		size_t FrameCount() const;
 		uint32_t GetFrameDelay(size_t index) const;
 		std::unique_ptr<uint32_t[]>& GetFrame(size_t currentIndex, size_t targetIndex);
-
+		void ReadComplete();
 
 	};
 }

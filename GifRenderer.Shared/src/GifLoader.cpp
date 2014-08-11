@@ -7,34 +7,30 @@ int istreamReader(GifFileType * gft, GifByteType * buf, int length)
 	auto egi = reinterpret_cast<gif_user_data*>(gft->UserData);
 	if (length == -1)
 	{
-		egi->position = egi->revertPosition;
+		egi->position = 0;
 		return 0;
 	}
 	else if (length == -2)
 	{
-		egi->revertPosition = egi->position;
+		egi->buffer.clear();
 		return 0;
 	}
 	else
 	{
 		if (egi->getter != nullptr && (egi->position == egi->buffer.size() || egi->position + length > egi->buffer.size()))
 		{
-			Platform::Array<uint8_t>^ moreData = nullptr;
-			if (!egi->getter->Get(&moreData))
+			if (length > (egi->buffer.size() - egi->position) + egi->reader->UnconsumedBufferLength)
 			{
-				egi->getter->DisposeWorkaround();
-				egi->getter = nullptr;
-			}
-			
-			if (moreData->Length == 0)
 				return -1;
+			}
 			else
 			{
+				Platform::WriteOnlyArray<uint8_t>^ moreData = ref new Platform::WriteOnlyArray<uint8_t>(std::min(egi->reader->UnconsumedBufferLength, 4096));
+				egi->reader->ReadBytes(moreData);
 				auto existingSize = egi->buffer.size();
 				egi->buffer.resize(existingSize + moreData->Length);
 				memcpy(egi->buffer.data() + existingSize, moreData->Data, moreData->Length);
 			}
-			
 		}
 
 		auto egiLength = egi->buffer.size();
@@ -212,26 +208,25 @@ void loadGifFrames(GifFileType* gifFile, std::vector<GifFrame>& frames)
 		throw ref new Platform::InvalidArgumentException("image count didnt match frame size");
 }
 
-GifLoader::GifLoader(GetMoreData^ getter)
+GifLoader::GifLoader(Platform::Array<uint8_t>^ initialData, Windows::Storage::Streams::IInputStream^ inputStream)
 {
-	_loaderData = { 0, std::vector<uint8_t>(), getter, 0 };
+	auto dataReader = ref new Windows::Storage::Streams::DataReader(inputStream);
+	dataReader->InputStreamOptions = Windows::Storage::Streams::InputStreamOptions::ReadAhead;
+	auto loadOperation = dataReader->LoadAsync(16 * 1024 * 1024); //16mb is our max load for a gif
+	loadOperation->Completed += ref new Windows::Foundation::AsyncOperationCompletedHandler(this, &GifLoader::ReadComplete);
+	_loaderData = { 0, std::vector<uint8_t>(), dataReader, loadOperation, false, false };
 	int error = 0;
 	
 	GifFileType* gifFile = DGifOpen(&_loaderData, istreamReader, &error);
 	if (gifFile != nullptr)
 	{
-		 _loaderData.revertPosition = _loaderData.position;
+		_loaderData.buffer.clear();
 		if (DGifSlurp(gifFile) == GIF_OK)
 		{
 			_isLoaded = true;
 			_loaderData.buffer.clear();
-			if (_loaderData.getter)
-			{
-				_loaderData.getter->DisposeWorkaround();
-				_loaderData.getter = nullptr;
-			}
+			_loaderData.reader = nullptr;
 			_loaderData.position = 0;
-			_loaderData.revertPosition = 0;
 		}
 		uint32_t width = (gifFile->SWidth % 2) + gifFile->SWidth;
 		uint32_t height = (gifFile->SHeight % 2) + gifFile->SHeight;
@@ -254,9 +249,13 @@ GifLoader::~GifLoader()
 		DGifCloseFile(_gifFile, &error);
 
 	_gifFile = nullptr;
+	if (_loaderData.loadOperation != nullptr)
+	{
+		_loaderData.loadOperation->Cancel();
+	}
 }
 
-bool GifLoader::IsLoaded() const { return _isLoaded || _loaderData.getter == nullptr; }
+bool GifLoader::IsLoaded() const { return _isLoaded || _loaderData.finishedLoad; }
 bool GifLoader::LoadMore()
 {
 	if (DGifSlurp(_gifFile) == GIF_OK)
@@ -264,24 +263,20 @@ bool GifLoader::LoadMore()
 		loadGifFrames(_gifFile, _frames);
 		_isLoaded = true;
     _loaderData.buffer.clear();
-		if (_loaderData.getter)
-		{
-			_loaderData.getter->DisposeWorkaround();
-			_loaderData.getter = nullptr;
-		}
+		_loaderData.reader = nullptr;
     _loaderData.position = 0;
-    _loaderData.revertPosition = 0;
 		return false;
 	}
 	else
 	{
-		if (_loaderData.getter == nullptr)
-			return false;
-		else
+		loadGifFrames(_gifFile, _frames);
+		if (_loaderData.finishedData)
 		{
-			loadGifFrames(_gifFile, _frames);
-			return true;
+			_loaderData.finishedLoad;
+			return false;
 		}
+		else
+			return true;		
 	}
 }
 uint32_t GifLoader::GetFrameDelay(size_t index) const { return _frames[index].delay; }
