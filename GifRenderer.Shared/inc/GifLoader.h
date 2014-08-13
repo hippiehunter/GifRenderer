@@ -1,6 +1,6 @@
 #pragma once
 
-#include <stdint.h>
+#include <cstdint>
 #include <vector>
 #include <memory>
 #include "gif_lib.h"
@@ -45,7 +45,7 @@ namespace GifRenderer
 		bool finishedData;
 	};
 
-	private ref class GifLoader
+	private ref class GifLoader sealed
 	{
 	private:
 		gif_user_data _loaderData;
@@ -54,9 +54,10 @@ namespace GifRenderer
 		std::vector<GifFrame> _frames;
 		std::unique_ptr<uint32_t[]> _renderBuffer;
 	public:
-		GifLoader(Windows::Storage::Streams::IDataReader^ reader);
-		~GifLoader();
+    GifLoader(Windows::Foundation::Collections::IVector<std::uint8_t>^ initialData, Windows::Storage::Streams::IInputStream^ inputStream);
+		virtual ~GifLoader();
 
+  internal:
 		bool IsLoaded() const;
 		bool LoadMore();
 		uint32_t Height() const;
@@ -64,7 +65,7 @@ namespace GifRenderer
 		size_t FrameCount() const;
 		uint32_t GetFrameDelay(size_t index) const;
 		std::unique_ptr<uint32_t[]>& GetFrame(size_t currentIndex, size_t targetIndex);
-		void ReadComplete();
+    void ReadComplete(Windows::Foundation::IAsyncOperation<unsigned int>^ asyncInfo, Windows::Foundation::AsyncStatus asyncStatus);
 
 	};
 }

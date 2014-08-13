@@ -14,6 +14,9 @@
       <Filter>inc</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)inc\GifLoader.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)inc\GifRenderer.h">
+      <Filter>inc</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)src\dgif_lib.cpp">
@@ -36,6 +39,7 @@
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)src\GifLoader.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)src\GifRenderer.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)inc\GifConverter.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="inc">

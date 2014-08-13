@@ -1,5 +1,6 @@
 #include "GifLoader.h"
-
+#include <algorithm>
+#include <collection.h>
 using namespace GifRenderer;
 
 int istreamReader(GifFileType * gft, GifByteType * buf, int length)
@@ -12,12 +13,13 @@ int istreamReader(GifFileType * gft, GifByteType * buf, int length)
 	}
 	else if (length == -2)
 	{
-		egi->buffer.clear();
+    egi->buffer.erase(egi->buffer.begin(), egi->buffer.begin() + egi->position);
+    egi->position = 0;
 		return 0;
 	}
 	else
 	{
-		if (egi->getter != nullptr && (egi->position == egi->buffer.size() || egi->position + length > egi->buffer.size()))
+    if (egi->reader != nullptr && (egi->position == egi->buffer.size() || egi->position + length > egi->buffer.size()))
 		{
 			if (length > (egi->buffer.size() - egi->position) + egi->reader->UnconsumedBufferLength)
 			{
@@ -25,8 +27,8 @@ int istreamReader(GifFileType * gft, GifByteType * buf, int length)
 			}
 			else
 			{
-				Platform::WriteOnlyArray<uint8_t>^ moreData = ref new Platform::WriteOnlyArray<uint8_t>(std::min(egi->reader->UnconsumedBufferLength, 4096));
-				egi->reader->ReadBytes(moreData);
+        Platform::Array<uint8_t>^ moreData = ref new Platform::Array<uint8_t>(min(egi->reader->UnconsumedBufferLength, (uint32_t)4096));
+        egi->reader->ReadBytes(moreData);
 				auto existingSize = egi->buffer.size();
 				egi->buffer.resize(existingSize + moreData->Length);
 				memcpy(egi->buffer.data() + existingSize, moreData->Data, moreData->Length);
@@ -208,25 +210,29 @@ void loadGifFrames(GifFileType* gifFile, std::vector<GifFrame>& frames)
 		throw ref new Platform::InvalidArgumentException("image count didnt match frame size");
 }
 
-GifLoader::GifLoader(Platform::Array<uint8_t>^ initialData, Windows::Storage::Streams::IInputStream^ inputStream)
+GifLoader::GifLoader(Windows::Foundation::Collections::IVector<std::uint8_t>^ initialData, Windows::Storage::Streams::IInputStream^ inputStream)
 {
 	auto dataReader = ref new Windows::Storage::Streams::DataReader(inputStream);
 	dataReader->InputStreamOptions = Windows::Storage::Streams::InputStreamOptions::ReadAhead;
 	auto loadOperation = dataReader->LoadAsync(16 * 1024 * 1024); //16mb is our max load for a gif
-	loadOperation->Completed += ref new Windows::Foundation::AsyncOperationCompletedHandler(this, &GifLoader::ReadComplete);
-	_loaderData = { 0, std::vector<uint8_t>(), dataReader, loadOperation, false, false };
+	loadOperation->Completed = ref new Windows::Foundation::AsyncOperationCompletedHandler<unsigned int>(this, &GifLoader::ReadComplete);
+  _loaderData = { 0, std::vector<uint8_t>(begin(initialData), end(initialData)), dataReader, loadOperation, false, false };
 	int error = 0;
 	
 	GifFileType* gifFile = DGifOpen(&_loaderData, istreamReader, &error);
 	if (gifFile != nullptr)
 	{
-		_loaderData.buffer.clear();
+    _loaderData.buffer.erase(_loaderData.buffer.begin(), _loaderData.buffer.begin() + _loaderData.position);
+    _loaderData.position = 0;
 		if (DGifSlurp(gifFile) == GIF_OK)
 		{
 			_isLoaded = true;
 			_loaderData.buffer.clear();
-			_loaderData.reader = nullptr;
+      if (_loaderData.reader != nullptr)
+        delete _loaderData.reader;
+      _loaderData.reader = nullptr;
 			_loaderData.position = 0;
+      _loaderData.loadOperation = nullptr;
 		}
 		uint32_t width = (gifFile->SWidth % 2) + gifFile->SWidth;
 		uint32_t height = (gifFile->SHeight % 2) + gifFile->SHeight;
@@ -252,7 +258,13 @@ GifLoader::~GifLoader()
 	if (_loaderData.loadOperation != nullptr)
 	{
 		_loaderData.loadOperation->Cancel();
+    _loaderData.loadOperation = nullptr;
 	}
+  if (_loaderData.reader != nullptr)
+  {
+    delete _loaderData.reader;
+    _loaderData.reader = nullptr;
+  }
 }
 
 bool GifLoader::IsLoaded() const { return _isLoaded || _loaderData.finishedLoad; }
@@ -263,8 +275,11 @@ bool GifLoader::LoadMore()
 		loadGifFrames(_gifFile, _frames);
 		_isLoaded = true;
     _loaderData.buffer.clear();
-		_loaderData.reader = nullptr;
+    if (_loaderData.reader != nullptr)
+      delete _loaderData.reader;
+    _loaderData.reader = nullptr;
     _loaderData.position = 0;
+    _loaderData.loadOperation = nullptr;
 		return false;
 	}
 	else
@@ -273,6 +288,12 @@ bool GifLoader::LoadMore()
 		if (_loaderData.finishedData)
 		{
 			_loaderData.finishedLoad;
+      _loaderData.buffer.clear();
+      if (_loaderData.reader != nullptr)
+        delete _loaderData.reader;
+      _loaderData.reader = nullptr;
+      _loaderData.position = 0;
+      _loaderData.loadOperation = nullptr;
 			return false;
 		}
 		else
@@ -293,4 +314,9 @@ std::unique_ptr<uint32_t[]>& GifLoader::GetFrame(size_t currentIndex, size_t tar
 {
 	loadGifFrame(_gifFile, _frames, _renderBuffer, currentIndex, targetIndex);
 	return _renderBuffer;
+}
+
+void GifLoader::ReadComplete(Windows::Foundation::IAsyncOperation<unsigned int>^ asyncInfo, Windows::Foundation::AsyncStatus asyncStatus)
+{
+  _loaderData.finishedData = true;
 }
