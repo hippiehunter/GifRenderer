@@ -60,6 +60,10 @@ namespace GifRenderer
     int	_lastFrame;
     bool _startedRendering;
     bool _suspended;
+    // Direct3D device
+    Microsoft::WRL::ComPtr<ID3D11Device> _d3dDevice;
+    // Direct2D object
+    Microsoft::WRL::ComPtr<ID2D1Device> _d2dDevice;
 
     inline void ThrowIfFailed(HRESULT hr)
     {

@@ -165,8 +165,8 @@ void loadGifFrames(GifFileType* gifFile, std::vector<GifFrame>& frames)
 
 	for (int i = frames.size(); i < gifFile->ImageCount; i++)
 	{
-		uint32_t delay;
-		DISPOSAL_METHODS disposal;
+		uint32_t delay = 100;
+		DISPOSAL_METHODS disposal = DISPOSAL_METHODS::DM_NONE;
 		int32_t transparentColor = -1;
 
 		auto extensionBlocks = gifFile->SavedImages[i].ExtensionBlocks;

@@ -1,28 +1,23 @@
 #include "GifRenderer.h"
 
-
-
-namespace GifRenderer
-{
-  // Direct3D device
-  Microsoft::WRL::ComPtr<ID3D11Device> g_d3dDevice;
-
-  // Direct2D object
-  Microsoft::WRL::ComPtr<ID2D1Device> g_d2dDevice;
-}
-
-
 using namespace GifRenderer;
 typedef ::GifRenderer::GifRenderer GR;
 
 
 GR::GifRenderer(Windows::Foundation::Collections::IVector<std::uint8_t>^ initialData, Windows::Storage::Streams::IInputStream^ inputStream)
 {
+  _d3dDevice = nullptr;
+  _d2dDevice = nullptr;
   _gifLoader = ref new GifLoader(initialData, inputStream);
   _displayInfo = DisplayInformation::GetForCurrentView();
   _suspendingCookie = (Application::Current->Suspending += ref new SuspendingEventHandler(this, &GifRenderer::OnSuspending));
   _resumingCookie = (Application::Current->Resuming += ref new Windows::Foundation::EventHandler<Object^>(this, &GifRenderer::OnResuming));
-
+  _callback = Make<VirtualSurfaceUpdatesCallbackNative>(this);
+  _imageSource = ref new VirtualSurfaceImageSource(_gifLoader->Width(), _gifLoader->Height());
+  reinterpret_cast<IUnknown*>(_imageSource)->QueryInterface(IID_PPV_ARGS(&_sisNative));
+  _sisNative->RegisterForUpdatesNeeded(_callback.Get());
+  _timer = ref new BasicTimer();
+  CreateDeviceResources();
 }
 
 void GR::OnSuspending(Object ^sender, SuspendingEventArgs ^e)
@@ -32,14 +27,15 @@ void GR::OnSuspending(Object ^sender, SuspendingEventArgs ^e)
   _renderBitmap = nullptr;
   _d2dContext = nullptr;
 
-  if (g_d3dDevice != nullptr)
+  if (_d3dDevice != nullptr)
   {
     ComPtr<IDXGIDevice3> dxgiDevice;
-    g_d3dDevice.As(&dxgiDevice);
+    _d3dDevice.As(&dxgiDevice);
 
     // Hints to the driver that the app is entering an idle state and that its memory can be used temporarily for other apps.
     dxgiDevice->Trim();
-    g_d3dDevice = nullptr;
+    _d3dDevice = nullptr;
+    _d2dDevice = nullptr;
   }
 
 }
@@ -55,15 +51,6 @@ void GR::OnResuming(Object ^sender, Object ^e)
 
 VirtualSurfaceImageSource^ GR::ImageSource::get()
 {
-  if (_imageSource == nullptr)
-  {
-    _callback = Make<VirtualSurfaceUpdatesCallbackNative>(this);
-    _imageSource = ref new VirtualSurfaceImageSource(_gifLoader->Width(), _gifLoader->Height());
-    reinterpret_cast<IUnknown*>(_imageSource)->QueryInterface(IID_PPV_ARGS(&_sisNative));
-    _sisNative->RegisterForUpdatesNeeded(_callback.Get());
-    _timer = ref new BasicTimer();
-    CreateDeviceResources();
-  }
   return _imageSource;
 }
 
@@ -84,7 +71,7 @@ GR::~GifRenderer()
 
 void GR::CreateDeviceResources()
 {
-  if (g_d3dDevice == nullptr)
+  if (_d3dDevice == nullptr)
   {
     // This flag adds support for surfaces with a different color channel ordering
     // than the API default. It is required for compatibility with Direct2D.
@@ -120,7 +107,7 @@ void GR::CreateDeviceResources()
       featureLevels,                  // List of feature levels this app can support.
       ARRAYSIZE(featureLevels),
       D3D11_SDK_VERSION,              // Always set this to D3D11_SDK_VERSION for Metro style apps.
-      &g_d3dDevice,                   // Returns the Direct3D device created.
+      &_d3dDevice,                   // Returns the Direct3D device created.
       nullptr,
       nullptr
       )
@@ -129,7 +116,7 @@ void GR::CreateDeviceResources()
     // Get the Direct3D 11.1 API device.
     ComPtr<IDXGIDevice> dxgiDevice;
     ThrowIfFailed(
-      g_d3dDevice.As(&dxgiDevice)
+      _d3dDevice.As(&dxgiDevice)
       );
 
     // Create the Direct2D device object and a corresponding context.
@@ -137,13 +124,13 @@ void GR::CreateDeviceResources()
       D2D1CreateDevice(
       dxgiDevice.Get(),
       nullptr,
-      &g_d2dDevice
+      &_d2dDevice
       )
       );
   }
 
   ThrowIfFailed(
-    g_d2dDevice->CreateDeviceContext(
+    _d2dDevice->CreateDeviceContext(
     D2D1_DEVICE_CONTEXT_OPTIONS_NONE,
     &_d2dContext
     )
@@ -155,7 +142,7 @@ void GR::CreateDeviceResources()
   // Get the Direct3D 11.1 API device.
   ComPtr<IDXGIDevice> dxgiDevice2;
   ThrowIfFailed(
-    g_d3dDevice.As(&dxgiDevice2)
+    _d3dDevice.As(&dxgiDevice2)
     );
 
   // Associate the DXGI device with the SurfaceImageSource.
