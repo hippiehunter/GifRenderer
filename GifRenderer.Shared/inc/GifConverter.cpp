@@ -56,6 +56,8 @@ namespace GifRenderer
       {
         return ref new StillImage(dataValue->url);
       }
+      else
+        return nullptr;
     }
 
     // No need to implement converting back on a one-way binding 
