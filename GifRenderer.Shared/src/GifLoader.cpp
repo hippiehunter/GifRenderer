@@ -3,47 +3,32 @@
 #include <collection.h>
 using namespace GifRenderer;
 
-int istreamReader(GifFileType * gft, GifByteType * buf, int length)
+int gif_user_data::read(GifByteType * buf, unsigned int length)
 {
-	auto egi = reinterpret_cast<gif_user_data*>(gft->UserData);
-	if (length == -1)
+  if (reader != nullptr && (position == buffer.size() || position + length > buffer.size()))
 	{
-		egi->position = 0;
-		return 0;
-	}
-	else if (length == -2)
-	{
-    egi->buffer.erase(egi->buffer.begin(), egi->buffer.begin() + egi->position);
-    egi->position = 0;
-		return 0;
-	}
-	else
-	{
-    if (egi->reader != nullptr && (egi->position == egi->buffer.size() || egi->position + length > egi->buffer.size()))
+		if (length > (buffer.size() - position) + reader->UnconsumedBufferLength)
 		{
-			if (length > (egi->buffer.size() - egi->position) + egi->reader->UnconsumedBufferLength)
-			{
-				return -1;
-			}
-			else
-			{
-        Platform::Array<uint8_t>^ moreData = ref new Platform::Array<uint8_t>(min(egi->reader->UnconsumedBufferLength, (uint32_t)4096));
-        egi->reader->ReadBytes(moreData);
-				auto existingSize = egi->buffer.size();
-				egi->buffer.resize(existingSize + moreData->Length);
-				memcpy(egi->buffer.data() + existingSize, moreData->Data, moreData->Length);
-			}
+			return -1;
 		}
-
-		auto egiLength = egi->buffer.size();
-
-		if (egi->position == egiLength) return 0;
-		if (egi->position + length == egiLength) length = egiLength - egi->position;
-		memcpy(buf, egi->buffer.data() + egi->position, length);
-		egi->position += length;
-
-		return length;
+		else
+		{
+      Platform::Array<uint8_t>^ moreData = ref new Platform::Array<uint8_t>(min(reader->UnconsumedBufferLength, (uint32_t)4096));
+      reader->ReadBytes(moreData);
+			auto existingSize = buffer.size();
+			buffer.resize(existingSize + moreData->Length);
+			memcpy(buffer.data() + existingSize, moreData->Data, moreData->Length);
+		}
 	}
+
+	auto egiLength = buffer.size();
+
+	if (position == egiLength) return 0;
+	if (position + length == egiLength) length = egiLength - position;
+	memcpy(buf, buffer.data() + position, length);
+	position += length;
+
+	return length;
 }
 
 struct bgraColor
@@ -54,7 +39,7 @@ struct bgraColor
 	uint8_t alpha;
 };
 
-void mapRasterBits(uint8_t* rasterBits, std::unique_ptr<uint32_t[]>& targetFrame, ColorMapObject * colorMap, int top, int left, int bottom, int right, int width, int32_t transparencyColor)
+void mapRasterBits(uint8_t* rasterBits, std::unique_ptr<uint32_t[]>& targetFrame, ColorMapObject& colorMap, int top, int left, int bottom, int right, int width, int32_t transparencyColor)
 {
 
 	int i = 0;
@@ -69,14 +54,15 @@ void mapRasterBits(uint8_t* rasterBits, std::unique_ptr<uint32_t[]>& targetFrame
 				transparencyColor != index)
 			{
 				auto colorTarget = reinterpret_cast<GifColorType*>(targetFrame.get() + offset);
-				*colorTarget = colorMap->Colors[index];
+				*colorTarget = colorMap.Colors[index];
 			}
 			i++;
 		}
 	}
 }
 
-void loadGifFrame(GifFileType* gifFile, const std::vector<GifFrame>& frames, std::unique_ptr<uint32_t[]>& buffer, int currentFrame, int targetFrame)
+template<typename GIFTYPE>
+void loadGifFrame(GIFTYPE& gifFile, const std::vector<GifFrame>& frames, std::unique_ptr<uint32_t[]>& buffer, size_t currentFrame, size_t targetFrame)
 {
 	uint32_t width = gifFile->SWidth;
 	uint32_t height = gifFile->SHeight;
@@ -84,9 +70,9 @@ void loadGifFrame(GifFileType* gifFile, const std::vector<GifFrame>& frames, std
 	bool hasLoop = true;
 
 	bgraColor bgColor;
-	if (gifFile->SColorMap != nullptr)
+  if (gifFile->SColorMap.Colors.size() != 0 && gifFile->SBackGroundColor > 0)
 	{
-		auto color = gifFile->SColorMap->Colors[gifFile->SBackGroundColor];
+		auto color = gifFile->SColorMap.Colors[gifFile->SBackGroundColor];
 		bgColor.red = color.Red;
 		bgColor.green = color.Green;
 		bgColor.blue = color.Blue;
@@ -110,22 +96,22 @@ void loadGifFrame(GifFileType* gifFile, const std::vector<GifFrame>& frames, std
 		uint8_t* bufPtr = (uint8_t*)buffer.get();
 		uint8_t* lastFramePtr = (uint8_t*)lastFrame.get();
 
-		for (int y = 0; y < height; y++)
+		for (decltype(height) y = 0; y < height; y++)
 		{
-			for (int x = 0; x < width; x++)
+      for (decltype(width) x = 0; x < width; x++)
 			{
-				int offset = y * width + x;
+				auto offset = y * width + x;
 				memcpy(buffer.get() + offset, &bgColor, 4);
 			}
 		}
 	}
 
-	for (int i = currentFrame; i < gifFile->ImageCount && i <= targetFrame; i++)
+	for (auto i = currentFrame; i < gifFile->SavedImages.size() && i <= targetFrame; i++)
 	{
 		auto& frame = frames[i];
-		auto decodeFrame = gifFile->SavedImages[i];
+		auto& decodeFrame = gifFile->SavedImages[i];
 		auto disposal = frame.disposal;
-		auto colorMap = (decodeFrame.ImageDesc.ColorMap != nullptr ? decodeFrame.ImageDesc.ColorMap : (gifFile->SColorMap != nullptr ? gifFile->SColorMap : nullptr));
+    auto colorMap = (decodeFrame.ImageDesc.ColorMap.Colors.size() != 0 ? decodeFrame.ImageDesc.ColorMap : (gifFile->SColorMap.Colors.size() != 0 ? gifFile->SColorMap : ColorMapObject{}));
 
 		if (disposal == DISPOSAL_METHODS::DM_PREVIOUS)
 		{
@@ -135,14 +121,14 @@ void loadGifFrame(GifFileType* gifFile, const std::vector<GifFrame>& frames, std
 			memcpy(lastFrame.get(), buffer.get(), width * height * sizeof(uint32_t));
 		}
 
-		mapRasterBits(decodeFrame.RasterBits, buffer, colorMap, frame.top, frame.left, frame.bottom, frame.right, width, frame.transparentColor);
+		mapRasterBits(decodeFrame.RasterBits.get(), buffer, colorMap, frame.top, frame.left, frame.bottom, frame.right, width, frame.transparentColor);
 
 		switch (disposal)
 		{
 		case DISPOSAL_METHODS::DM_BACKGROUND:
-			for (int y = 0; y < height; y++)
+			for (decltype(height) y = 0; y < height; y++)
 			{
-				for (int x = 0; x < width; x++)
+        for (decltype(width) x = 0; x < width; x++)
 				{
 					int offset = y * width + x;
 					memcpy(buffer.get() + offset, &bgColor, 4);
@@ -155,27 +141,26 @@ void loadGifFrame(GifFileType* gifFile, const std::vector<GifFrame>& frames, std
 		}
 	}
 }
-
-void loadGifFrames(GifFileType* gifFile, std::vector<GifFrame>& frames)
+template<typename GIFTYPE>
+void loadGifFrames(GIFTYPE& gifFile, std::vector<GifFrame>& frames)
 {
 	uint32_t width = gifFile->SWidth;
 	uint32_t height = gifFile->SHeight;
 	int loopCount = 0;
 	bool hasLoop = true;
 
-	for (int i = frames.size(); i < gifFile->ImageCount; i++)
+	for (auto i = frames.size(); i < gifFile->SavedImages.size(); i++)
 	{
 		uint32_t delay = 100;
 		DISPOSAL_METHODS disposal = DISPOSAL_METHODS::DM_NONE;
 		int32_t transparentColor = -1;
 
 		auto extensionBlocks = gifFile->SavedImages[i].ExtensionBlocks;
-		for (int ext = 0; ext < gifFile->SavedImages[i].ExtensionBlockCount; ext++)
+    for (size_t ext = 0; ext < gifFile->SavedImages[i].ExtensionBlocks.size(); ext++)
 		{
 			if (extensionBlocks[ext].Function == 0xF9)
 			{
-				GraphicsControlBlock gcb;
-				DGifExtensionToGCB(extensionBlocks[ext].ByteCount, extensionBlocks[ext].Bytes, &gcb);
+				GraphicsControlBlock gcb(extensionBlocks[ext]);
 
 				delay = gcb.DelayTime * 10;
 
@@ -206,7 +191,7 @@ void loadGifFrames(GifFileType* gifFile, std::vector<GifFrame>& frames)
 		frame.left = left;
 		frame.disposal = disposal;
 	}
-	if (frames.size() != gifFile->ImageCount)
+	if (frames.size() != gifFile->SavedImages.size())
 		throw ref new Platform::InvalidArgumentException("image count didnt match frame size");
 }
 
@@ -219,30 +204,45 @@ GifLoader::GifLoader(Windows::Foundation::Collections::IVector<std::uint8_t>^ in
   _loaderData = { 0, std::vector<uint8_t>(begin(initialData), end(initialData)), dataReader, loadOperation, false, false };
 	int error = 0;
 	
-	GifFileType* gifFile = DGifOpen(&_loaderData, istreamReader, &error);
-	if (gifFile != nullptr)
-	{
+  try
+  {
+    _gifFile = std::make_unique<GifFileType<gif_user_data>>(_loaderData);
+
     _loaderData.buffer.erase(_loaderData.buffer.begin(), _loaderData.buffer.begin() + _loaderData.position);
     _loaderData.position = 0;
-		if (DGifSlurp(gifFile) == GIF_OK)
-		{
-			_isLoaded = true;
-			_loaderData.buffer.clear();
+    try
+    {
+      _gifFile->Slurp(_loaderData);
+      _isLoaded = true;
+      _loaderData.buffer.clear();
       if (_loaderData.reader != nullptr)
         delete _loaderData.reader;
       _loaderData.reader = nullptr;
-			_loaderData.position = 0;
+      _loaderData.position = 0;
       _loaderData.loadOperation = nullptr;
-		}
-		uint32_t width = (gifFile->SWidth % 2) + gifFile->SWidth;
-		uint32_t height = (gifFile->SHeight % 2) + gifFile->SHeight;
+    }
+    catch (...)
+    {
+      if (_loaderData.finishedData)
+      {
+        _isLoaded = true;
+        _loaderData.buffer.clear();
+        if (_loaderData.reader != nullptr)
+          delete _loaderData.reader;
+        _loaderData.reader = nullptr;
+        _loaderData.position = 0;
+        _loaderData.loadOperation = nullptr;
+      }
+    }
+    
+    uint32_t width = (_gifFile->SWidth % 2) + _gifFile->SWidth;
+    uint32_t height = (_gifFile->SHeight % 2) + _gifFile->SHeight;
 
-		gifFile->SHeight = height;
-		gifFile->SWidth = width;
-		_gifFile = gifFile;
-		loadGifFrames(_gifFile, _frames);
-	}
-	else
+    _gifFile->SHeight = height;
+    _gifFile->SWidth = width;
+    loadGifFrames(_gifFile, _frames);
+  }
+  catch (...)
 	{
 		throw ref new Platform::InvalidArgumentException("invalid gif asset");
 	}
@@ -251,10 +251,6 @@ GifLoader::GifLoader(Windows::Foundation::Collections::IVector<std::uint8_t>^ in
 GifLoader::~GifLoader() 
 {
 	int error = 0;
-	if (_gifFile != nullptr)
-		DGifCloseFile(_gifFile, &error);
-
-	_gifFile = nullptr;
 	if (_loaderData.loadOperation != nullptr)
 	{
 		_loaderData.loadOperation->Cancel();
@@ -270,24 +266,25 @@ GifLoader::~GifLoader()
 bool GifLoader::IsLoaded() const { return _isLoaded || _loaderData.finishedLoad; }
 bool GifLoader::LoadMore()
 {
-	if (DGifSlurp(_gifFile) == GIF_OK)
-	{
-		loadGifFrames(_gifFile, _frames);
-		_isLoaded = true;
+  try
+  {
+    _gifFile->Slurp(_loaderData);
+    loadGifFrames(_gifFile, _frames);
+    _isLoaded = true;
     _loaderData.buffer.clear();
     if (_loaderData.reader != nullptr)
       delete _loaderData.reader;
     _loaderData.reader = nullptr;
     _loaderData.position = 0;
     _loaderData.loadOperation = nullptr;
-		return false;
+    return false;
 	}
-	else
+  catch (...)
 	{
 		loadGifFrames(_gifFile, _frames);
 		if (_loaderData.finishedData)
 		{
-			_loaderData.finishedLoad;
+			_loaderData.finishedLoad = true;
       _loaderData.buffer.clear();
       if (_loaderData.reader != nullptr)
         delete _loaderData.reader;
@@ -305,7 +302,7 @@ uint32_t GifLoader::Height() const { return _gifFile->SHeight; }
 uint32_t GifLoader::Width() const{ return _gifFile->SWidth; }
 size_t GifLoader::FrameCount() const
 {
-	if (_frames.size() != _gifFile->ImageCount)
+  if (_frames.size() != _gifFile->SavedImages.size())
 		throw ref new Platform::InvalidArgumentException("image count didnt match frame size");
 	return _frames.size(); 
 }

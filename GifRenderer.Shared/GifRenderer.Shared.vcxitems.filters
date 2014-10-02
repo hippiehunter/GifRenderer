@@ -4,42 +4,26 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)inc\BasicTimer.h">
       <Filter>inc</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)inc\gif_hash.h">
-      <Filter>inc</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)inc\gif_lib.h">
-      <Filter>inc</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)inc\gif_lib_private.h">
-      <Filter>inc</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)inc\GifLoader.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)inc\GifRenderer.h">
+      <Filter>inc</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)giflibpp.h">
+      <Filter>inc</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)inc\GifLoader.h">
       <Filter>inc</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="$(MSBuildThisFileDirectory)src\dgif_lib.cpp">
+    <ClCompile Include="$(MSBuildThisFileDirectory)inc\GifConverter.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)src\gif_err.cpp">
+    <ClCompile Include="$(MSBuildThisFileDirectory)src\GifLoader.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)src\gif_font.cpp">
+    <ClCompile Include="$(MSBuildThisFileDirectory)src\GifRenderer.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)src\gif_hash.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)src\gifalloc.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)src\quantize.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)src\GifLoader.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)src\GifRenderer.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)inc\GifConverter.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="inc">

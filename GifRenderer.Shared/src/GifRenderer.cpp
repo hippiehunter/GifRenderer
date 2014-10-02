@@ -241,7 +241,7 @@ bool GR::Update(float total, float delta)
 {
   double msDelta = ((double)total) * 1000;
   double accountedFor = 0;
-  int i = 0;
+  size_t i = 0;
   for (; accountedFor < msDelta; i++)
   {
     if (i >= _gifLoader->FrameCount())

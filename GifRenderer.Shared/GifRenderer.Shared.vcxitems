@@ -15,20 +15,12 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)inc\GifConverter.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)src\dgif_lib.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)src\GifLoader.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)src\GifRenderer.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)src\gif_err.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)src\gif_font.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)src\gif_hash.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)src\gifalloc.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)src\quantize.cpp" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)giflibpp.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)inc\BasicTimer.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)inc\GifLoader.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)inc\GifRenderer.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)inc\gif_hash.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)inc\gif_lib.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)inc\gif_lib_private.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectCapability Include="SourceItemsFromImports" />

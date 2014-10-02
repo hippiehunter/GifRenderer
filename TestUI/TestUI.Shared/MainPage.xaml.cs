@@ -51,11 +51,14 @@ namespace TestUI
         }
 
 		public object data {get; set;}
-
+		public List<string> TestUrls = new List<string>
+		{
+			"https://imagetestsuite.googlecode.com/svn/trunk/gif/0646caeb9b9161c777f117007921a687.gif"
+		};
 		private async void Button_Click(object sender, RoutedEventArgs e)
 		{
 			HttpClient client = new HttpClient();
-			var response = await client.GetAsync(new Uri(theUrl.Text), HttpCompletionOption.ResponseHeadersRead);
+			var response = await client.GetAsync(new Uri(TestUrls.LastOrDefault()), HttpCompletionOption.ResponseHeadersRead);
 			var responseStream = await response.Content.ReadAsInputStreamAsync();
 			var initialBuffer = await responseStream.ReadAsync(new Windows.Storage.Streams.Buffer(4096), 4096, InputStreamOptions.None);
 			if (initialBuffer.Length == 0)
@@ -64,7 +67,10 @@ namespace TestUI
 			var bufferBytes = new byte[initialBuffer.Length];
 			initialBuffer.CopyTo(bufferBytes);
 
-			data = new GifRenderer.GifPayload { initialData = bufferBytes.ToList(), inputStream = responseStream, url = theUrl.Text};
+			data = new GifRenderer.GifPayload { initialData = bufferBytes.ToList(), inputStream = responseStream, url = TestUrls.LastOrDefault()};
+
+			TestUrls.Remove(TestUrls.Last());
+
 			if (PropertyChanged != null)
 				PropertyChanged(this, new PropertyChangedEventArgs("data"));
 			data = null;

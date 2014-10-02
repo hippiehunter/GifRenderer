@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <vector>
 #include <memory>
-#include "gif_lib.h"
+#include "giflibpp.h"
 
 namespace GifRenderer
 {
@@ -43,6 +43,16 @@ namespace GifRenderer
 		Windows::Storage::Streams::DataReaderLoadOperation^ loadOperation;
 		bool finishedLoad;
 		bool finishedData;
+    int read(GifByteType * buf, unsigned int length);
+    void revert() 
+    {
+      position = 0;
+    }
+    void checkpoint() 
+    {
+      buffer.erase(buffer.begin(), buffer.begin() + position);
+      position = 0;
+    }
 	};
 
 	private ref class GifLoader sealed
@@ -50,7 +60,7 @@ namespace GifRenderer
 	private:
 		gif_user_data _loaderData;
 		bool _isLoaded;
-		GifFileType* _gifFile;
+    std::unique_ptr<GifFileType<gif_user_data>> _gifFile;
 		std::vector<GifFrame> _frames;
 		std::unique_ptr<uint32_t[]> _renderBuffer;
 	public:

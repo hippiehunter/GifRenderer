@@ -103,7 +103,7 @@ DGifOpenFileHandle(int FileHandle, int *Error)
 	f = _fdopen(FileHandle, "rb");    /* Make it into a stream: */
 
 	/*@-mustfreeonly@*/
-	GifFile->Private = (void *)Private;
+	GifFile->Private = Private;
 	Private->FileHandle = FileHandle;
 	Private->File = f;
 	Private->FileState = FILE_STATE_READ;
@@ -147,77 +147,114 @@ DGifOpenFileHandle(int FileHandle, int *Error)
 	return GifFile;
 }
 
-/******************************************************************************
- GifFileType constructor with user supplied input function (TVT)
- ******************************************************************************/
-GifFileType *
-DGifOpen(void *userData, InputFunc readFunc, int *Error)
+GifFileType::~GifFileType()
 {
-	char Buf[GIF_STAMP_LEN + 1];
-	GifFileType *GifFile;
-	GifFilePrivateType *Private;
+  if (GifFile == NULL || GifFile->Private == NULL)
+    return GIF_ERROR;
 
-	GifFile = (GifFileType *)malloc(sizeof(GifFileType));
-	if (GifFile == NULL) {
-		if (Error != NULL)
-			*Error = D_GIF_ERR_NOT_ENOUGH_MEM;
-		return NULL;
-	}
+  if (GifFile->Image.ColorMap)
+  {
+    GifFreeMapObject(GifFile->Image.ColorMap);
+    GifFile->Image.ColorMap = NULL;
+  }
 
-	memset(GifFile, '\0', sizeof(GifFileType));
+  if (GifFile->SColorMap)
+  {
+    GifFreeMapObject(GifFile->SColorMap);
+    GifFile->SColorMap = NULL;
+  }
 
-	/* Belt and suspenders, in case the null pointer isn't zero */
-	GifFile->SavedImages = NULL;
-	GifFile->SColorMap = NULL;
+  if (GifFile->SavedImages)
+  {
+    GifFreeSavedImages(GifFile);
+    GifFile->SavedImages = NULL;
+  }
 
-	Private = (GifFilePrivateType *)malloc(sizeof(GifFilePrivateType));
-	if (!Private) {
-		if (Error != NULL)
-			*Error = D_GIF_ERR_NOT_ENOUGH_MEM;
-		free((char *)GifFile);
-		return NULL;
-	}
+  GifFreeExtensions(&GifFile->ExtensionBlockCount, &GifFile->ExtensionBlocks);
+  if (!IS_READABLE(Private))
+  {
+    /* This file was NOT open for reading: */
+    if (ErrorCode != NULL)
+      *ErrorCode = D_GIF_ERR_NOT_READABLE;
+    free((char *)GifFile->Private);
+    free(GifFile);
+    return GIF_ERROR;
+  }
 
-	GifFile->Private = (void *)Private;
-	Private->FileHandle = 0;
-	Private->File = NULL;
-	Private->FileState = FILE_STATE_READ;
+  if (Private->File && (fclose(Private->File) != 0))
+  {
+    if (ErrorCode != NULL)
+      *ErrorCode = D_GIF_ERR_CLOSE_FAILED;
+    free((char *)GifFile->Private);
+    free(GifFile);
+    return GIF_ERROR;
+  }
 
-	Private->Read = readFunc;    /* TVT */
-	GifFile->UserData = userData;    /* TVT */
+  free((char *)GifFile->Private);
+  free(GifFile);
+  if (ErrorCode != NULL)
+    *ErrorCode = D_GIF_SUCCEEDED;
+  return GIF_OK;
+}
 
-	/* Lets see if this is a GIF file: */
-	if (READ(GifFile, (unsigned char *)Buf, GIF_STAMP_LEN) != GIF_STAMP_LEN) {
-		if (Error != NULL)
-			*Error = D_GIF_ERR_READ_FAILED;
-		free((char *)Private);
-		free((char *)GifFile);
-		return NULL;
-	}
+GifFileType::GifFileType(void *userData, InputFunc readFunc, int *Error)
+{
+  char Buf[GIF_STAMP_LEN + 1];
+  Private = (GifFilePrivateType *)malloc(sizeof(GifFilePrivateType));
+  /* Belt and suspenders, in case the null pointer isn't zero */
+  GifFile->SavedImages = NULL;
+  GifFile->SColorMap = NULL;
 
-	/* Check for GIF prefix at start of file */
-	Buf[GIF_STAMP_LEN] = '\0';
-	if (strncmp(GIF_STAMP, Buf, GIF_VERSION_POS) != 0) {
-		if (Error != NULL)
-			*Error = D_GIF_ERR_NOT_GIF_FILE;
-		free((char *)Private);
-		free((char *)GifFile);
-		return NULL;
-	}
+  Private = (GifFilePrivateType *)malloc(sizeof(GifFilePrivateType));
+  if (!Private)
+  {
+    if (Error != NULL)
+      *Error = D_GIF_ERR_NOT_ENOUGH_MEM;
+    free((char *)GifFile);
+    return NULL;
+  }
 
-	if (DGifGetScreenDesc(GifFile) == GIF_ERROR) {
-		free((char *)Private);
-		free((char *)GifFile);
-		*Error = D_GIF_ERR_NO_SCRN_DSCR;
-		return NULL;
-	}
+  GifFile->Private = Private;
+  Private->FileHandle = 0;
+  Private->File = NULL;
+  Private->FileState = FILE_STATE_READ;
 
-	GifFile->Error = 0;
+  Private->Read = readFunc;    /* TVT */
+  GifFile->UserData = userData;    /* TVT */
 
-	/* What version of GIF? */
-	Private->gif89 = (Buf[GIF_VERSION_POS] == '9');
+  /* Lets see if this is a GIF file: */
+  if (READ(GifFile, (unsigned char *)Buf, GIF_STAMP_LEN) != GIF_STAMP_LEN)
+  {
+    if (Error != NULL)
+      *Error = D_GIF_ERR_READ_FAILED;
+    free((char *)Private);
+    free((char *)GifFile);
+    return NULL;
+  }
 
-	return GifFile;
+  /* Check for GIF prefix at start of file */
+  Buf[GIF_STAMP_LEN] = '\0';
+  if (strncmp(GIF_STAMP, Buf, GIF_VERSION_POS) != 0)
+  {
+    if (Error != NULL)
+      *Error = D_GIF_ERR_NOT_GIF_FILE;
+    free((char *)Private);
+    free((char *)GifFile);
+    return NULL;
+  }
+
+  if (DGifGetScreenDesc(GifFile) == GIF_ERROR)
+  {
+    free((char *)Private);
+    free((char *)GifFile);
+    *Error = D_GIF_ERR_NO_SCRN_DSCR;
+    return NULL;
+  }
+
+  GifFile->Error = 0;
+
+  /* What version of GIF? */
+  Private->gif89 = (Buf[GIF_VERSION_POS] == '9');
 }
 
 /******************************************************************************
