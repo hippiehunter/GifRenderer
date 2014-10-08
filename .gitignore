@@ -69,6 +69,7 @@ AppPackages/
 
 ## NuGet Package Restore
 packages/
+.nuget
 
 # Visual C++ cache files
 ipch/
