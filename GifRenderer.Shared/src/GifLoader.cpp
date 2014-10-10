@@ -284,6 +284,7 @@ bool GifLoader::LoadMore()
 		loadGifFrames(_gifFile, _frames);
 		if (_loaderData.finishedData)
 		{
+      _isLoaded = true;
 			_loaderData.finishedLoad = true;
       _loaderData.buffer.clear();
       if (_loaderData.reader != nullptr)
