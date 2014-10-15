@@ -1,7 +1,29 @@
 #include "GifLoader.h"
 #include <algorithm>
 #include <collection.h>
+#include <ppltasks.h>
 using namespace GifRenderer;
+
+void gif_user_data::readSome()
+{
+  finishedReader = false;
+  concurrency::create_task(reader->LoadAsync(256 * 1024))
+    .then([=](concurrency::task<uint32_t> loadOp)
+  {
+    try
+    {
+      if (loadOp.get() >= 256 *  1024)
+        finishedReader = true;
+      else
+        finishedData = true;
+    }
+    catch (...)
+    {
+      finishedData = true;
+    }
+  });
+
+}
 
 int gif_user_data::read(GifByteType * buf, unsigned int length)
 {
@@ -9,6 +31,18 @@ int gif_user_data::read(GifByteType * buf, unsigned int length)
 	{
 		if (length > (buffer.size() - position) + reader->UnconsumedBufferLength)
 		{
+      if (finishedReader)
+      {
+        if (reader->UnconsumedBufferLength > 0)
+        {
+          Platform::Array<uint8_t>^ moreData = ref new Platform::Array<uint8_t>(min(reader->UnconsumedBufferLength, (uint32_t)4096));
+          reader->ReadBytes(moreData);
+          auto existingSize = buffer.size();
+          buffer.resize(existingSize + moreData->Length);
+          memcpy(buffer.data() + existingSize, moreData->Data, moreData->Length);
+        }
+        readSome();
+      }
 			return -1;
 		}
 		else
@@ -199,9 +233,8 @@ GifLoader::GifLoader(Windows::Foundation::Collections::IVector<std::uint8_t>^ in
 {
 	auto dataReader = ref new Windows::Storage::Streams::DataReader(inputStream);
 	dataReader->InputStreamOptions = Windows::Storage::Streams::InputStreamOptions::ReadAhead;
-	auto loadOperation = dataReader->LoadAsync(16 * 1024 * 1024); //16mb is our max load for a gif
-	loadOperation->Completed = ref new Windows::Foundation::AsyncOperationCompletedHandler<unsigned int>(this, &GifLoader::ReadComplete);
-  _loaderData = { 0, std::vector<uint8_t>(begin(initialData), end(initialData)), dataReader, loadOperation, false, false };
+  _loaderData = { 0, std::vector<uint8_t>(begin(initialData), end(initialData)), dataReader, false, false, false };
+  _loaderData.readSome();
 	int error = 0;
 	
   try
@@ -219,7 +252,6 @@ GifLoader::GifLoader(Windows::Foundation::Collections::IVector<std::uint8_t>^ in
         delete _loaderData.reader;
       _loaderData.reader = nullptr;
       _loaderData.position = 0;
-      _loaderData.loadOperation = nullptr;
     }
     catch (...)
     {
@@ -231,7 +263,6 @@ GifLoader::GifLoader(Windows::Foundation::Collections::IVector<std::uint8_t>^ in
           delete _loaderData.reader;
         _loaderData.reader = nullptr;
         _loaderData.position = 0;
-        _loaderData.loadOperation = nullptr;
       }
     }
     
@@ -251,12 +282,7 @@ GifLoader::GifLoader(Windows::Foundation::Collections::IVector<std::uint8_t>^ in
 GifLoader::~GifLoader() 
 {
 	int error = 0;
-	if (_loaderData.loadOperation != nullptr)
-	{
-		_loaderData.loadOperation->Cancel();
-    _loaderData.loadOperation = nullptr;
-	}
-  if (_loaderData.reader != nullptr)
+	if (_loaderData.reader != nullptr)
   {
     delete _loaderData.reader;
     _loaderData.reader = nullptr;
@@ -276,7 +302,6 @@ bool GifLoader::LoadMore()
       delete _loaderData.reader;
     _loaderData.reader = nullptr;
     _loaderData.position = 0;
-    _loaderData.loadOperation = nullptr;
     return false;
 	}
   catch (...)
@@ -291,7 +316,6 @@ bool GifLoader::LoadMore()
         delete _loaderData.reader;
       _loaderData.reader = nullptr;
       _loaderData.position = 0;
-      _loaderData.loadOperation = nullptr;
 			return false;
 		}
 		else
@@ -312,9 +336,4 @@ std::unique_ptr<uint32_t[]>& GifLoader::GetFrame(size_t currentIndex, size_t tar
 {
 	loadGifFrame(_gifFile, _frames, _renderBuffer, currentIndex, targetIndex);
 	return _renderBuffer;
-}
-
-void GifLoader::ReadComplete(Windows::Foundation::IAsyncOperation<unsigned int>^ asyncInfo, Windows::Foundation::AsyncStatus asyncStatus)
-{
-  _loaderData.finishedData = true;
 }

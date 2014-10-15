@@ -40,8 +40,8 @@ namespace GifRenderer
 		int position;
 		std::vector<uint8_t> buffer;
 		Windows::Storage::Streams::IDataReader^ reader;
-		Windows::Storage::Streams::DataReaderLoadOperation^ loadOperation;
 		bool finishedLoad;
+    bool finishedReader;
 		bool finishedData;
     int read(GifByteType * buf, unsigned int length);
     void revert() 
@@ -53,6 +53,7 @@ namespace GifRenderer
       buffer.erase(buffer.begin(), buffer.begin() + position);
       position = 0;
     }
+    void readSome();
 	};
 
 	private ref class GifLoader sealed
@@ -75,7 +76,5 @@ namespace GifRenderer
 		size_t FrameCount() const;
 		uint32_t GetFrameDelay(size_t index) const;
 		std::unique_ptr<uint32_t[]>& GetFrame(size_t currentIndex, size_t targetIndex);
-    void ReadComplete(Windows::Foundation::IAsyncOperation<unsigned int>^ asyncInfo, Windows::Foundation::AsyncStatus asyncStatus);
-
 	};
 }
