@@ -37,7 +37,8 @@ namespace GifRenderer
 
 	struct gif_user_data
 	{
-		int position;
+    
+		unsigned int position;
 		std::vector<uint8_t> buffer;
 		Windows::Storage::Streams::IDataReader^ reader;
 		bool finishedLoad;

@@ -113,11 +113,9 @@ public:
 
   void init(unsigned int colorCount)
   {
-    /*** FIXME: Our ColorCount has to be a power of two.  Is it necessary to
-    * make the user know that or should we automatically round up instead? */
-    if (colorCount != (1 << GifBitSize(colorCount)))
+    if (colorCount != (unsigned int)(1 << GifBitSize(colorCount)))
     {
-      throw std::runtime_error("invalid color map color count");
+      colorCount++;
     }
 
     Colors.resize(colorCount);
@@ -165,30 +163,33 @@ public:
 template<typename USERDATA>
 class GifDecompressor
 {
+private:
+  GifWord BitsPerPixel;     /* Bits per pixel (Codes uses at least this + 1). */
+  GifWord ClearCode;   /* The CLEAR LZ code. */
+  GifWord EOFCode;     /* The EOF LZ code. */
+  GifWord RunningCode; /* The next code algorithm can generate. */
+  GifWord RunningBits; /* The number of bits required to represent RunningCode. */
+  GifWord MaxCode1;    /* 1 bigger than max. possible code, in RunningBits bits. */
+  GifWord LastCode;    /* The code before the current code. */
+  GifWord CrntCode;    /* Current algorithm code. */
+  GifWord StackPtr;    /* For character stack (see below). */
+  GifWord CrntShiftState;    /* Number of bits in CrntShiftDWord. */
+  unsigned long CrntShiftDWord;   /* For bytes decomposition into codes. */
+  unsigned long PixelCount;   /* Number of pixels in image. */
+  std::array<GifByteType, 256> Buf;   /* Compressed input is buffered here. */
+  std::array<GifWord, LZ_MAX_CODE + 1> Stack; /* Decoded pixels are stacked here. */
+  std::array<GifWord, LZ_MAX_CODE + 1> Suffix;    /* So we can trace the codes. */
+  std::array<GifPrefixType, LZ_MAX_CODE + 1> Prefix;
 public:
-  GifDecompressor(USERDATA& userData, bool pgif89)
+  GifDecompressor(USERDATA& userData, unsigned long pixelCount)
   {
     BitsPerPixel = 0;
-    ClearCode = 0;
-    EOFCode = 0;
-    RunningCode = 0;
-    RunningBits = 0;
-    MaxCode1 = 0;
-    LastCode = 0;
-    CrntCode = 0;
-    StackPtr = 0;
-    CrntShiftState = 0;
-    CrntShiftDWord = 0;
-    PixelCount = 0;
-    bool gif89 = pgif89;
-
     if (userData.read((GifByteType*)&BitsPerPixel, 1) != 1)
     {    /* Read Code size from file. */
       throw std::runtime_error("failed to initialize decompressor");
     }
-
+    PixelCount = pixelCount;
     Buf[0] = 0;    /* Input Buffer empty. */
-    BitsPerPixel = BitsPerPixel;
     ClearCode = (1 << BitsPerPixel);
     EOFCode = ClearCode + 1;
     RunningCode = EOFCode + 1;
@@ -198,8 +199,6 @@ public:
     LastCode = NO_SUCH_CODE;
     CrntShiftState = 0;    /* No information in CrntShiftDWord. */
     CrntShiftDWord = 0;
-
-    Prefix = Prefix;
     for (int i = 0; i <= LZ_MAX_CODE; i++)
       Prefix[i] = NO_SUCH_CODE;
   }
@@ -220,7 +219,7 @@ public:
 
     if (buf > 0)
     {
-      *CodeBlock = &Buf[0];
+      *CodeBlock = &this->Buf[0];
       (*CodeBlock)[0] = buf;
       if (userData.read(&((*CodeBlock)[1]), buf) != buf)
       {
@@ -231,7 +230,7 @@ public:
     else
     {
       *CodeBlock = NULL;
-      Buf[0] = 0;    /* Make sure the buffer is empty! */
+      this->Buf[0] = 0;    /* Make sure the buffer is empty! */
       PixelCount = 0;    /* And local info. indicate image read. */
       return false;
     }
@@ -261,7 +260,7 @@ public:
       {
         throw std::runtime_error("invalid image expected termination code");
       }
-      if (userData.read(&buf[1], buf[0]) != Buf[0])
+      if (userData.read(&buf[1], buf[0]) != buf[0])
       {
         throw std::runtime_error("invalid image unexpected read failure");
       }
@@ -333,25 +332,28 @@ public:
   If image is defective, we might loop here forever, so we limit the loops to
   the maximum possible if image O.k. - LZ_MAX_CODE times.
   ******************************************************************************/
-  int GetPrefixChar(GifPrefixType *Prefix, int Code, int ClearCode)
+  GifWord GetPrefixChar(GifWord code, GifWord clearCode)
   {
     int i = 0;
-
-    while (Code > ClearCode && i++ <= LZ_MAX_CODE)
+    auto mutCode = code;
+    while (mutCode > clearCode && i++ <= LZ_MAX_CODE)
     {
-      if (Code > LZ_MAX_CODE)
+      if (mutCode > LZ_MAX_CODE)
       {
         return NO_SUCH_CODE;
       }
-      Code = Prefix[Code];
+      mutCode = Prefix[mutCode];
     }
-    return Code;
+    return mutCode;
   }
 
   void DecompressLine(USERDATA& userData, GifPixelType *Line, int LineLen)
   {
-    int i = 0;
-    int j, CrntPrefix;
+    int i = 0, CrntCode;
+    int CrntPrefix = 0;
+
+    auto StackPtr = this->StackPtr;
+    auto LastCode = this->LastCode;
 
     if (StackPtr > LZ_MAX_CODE)
     {
@@ -362,7 +364,7 @@ public:
     {
       /* Let pop the stack off before continueing to read the GIF file: */
       while (StackPtr != 0 && i < LineLen)
-        Line[i++] = Stack[--StackPtr];
+        Line[i++] = (GifPixelType)Stack[--StackPtr];
     }
 
     while (i < LineLen)
@@ -378,12 +380,13 @@ public:
       else if (CrntCode == ClearCode)
       {
         /* We need to start over again: */
-        for (j = 0; j <= LZ_MAX_CODE; j++)
+        for (int j = 0; j <= LZ_MAX_CODE; j++)
           Prefix[j] = NO_SUCH_CODE;
-        RunningCode = EOFCode + 1;
-        RunningBits = BitsPerPixel + 1;
-        MaxCode1 = 1 << RunningBits;
-        LastCode = NO_SUCH_CODE;
+
+        this->RunningCode = this->EOFCode + 1;
+        this->RunningBits = this->BitsPerPixel + 1;
+        this->MaxCode1 = 1 << this->RunningBits;
+        LastCode = this->LastCode = NO_SUCH_CODE;
       }
       else
       {
@@ -393,7 +396,7 @@ public:
         if (CrntCode < ClearCode)
         {
           /* This is simple - its pixel scalar, so add it to output: */
-          Line[i++] = CrntCode;
+          Line[i++] = (GifPixelType)CrntCode;
         }
         else
         {
@@ -409,19 +412,15 @@ public:
             * In that case CrntCode = XXXCode, CrntCode or the
             * prefix code is last code and the suffix char is
             * exactly the prefix of last code! */
-            if (CrntCode == RunningCode - 2)
+            if (CrntCode == this->RunningCode - 2)
             {
-              Suffix[RunningCode - 2] =
-                Stack[StackPtr++] = GetPrefixChar(&Prefix[0],
-                LastCode,
-                ClearCode);
+              Suffix[this->RunningCode - 2] =
+                Stack[StackPtr++] = GetPrefixChar(LastCode, ClearCode);
             }
             else
             {
-              Suffix[RunningCode - 2] =
-                Stack[StackPtr++] = GetPrefixChar(&Prefix[0],
-                CrntCode,
-                ClearCode);
+              Suffix[this->RunningCode - 2] =
+                Stack[StackPtr++] = GetPrefixChar(CrntCode, ClearCode);
             }
           }
           else
@@ -446,28 +445,30 @@ public:
 
           /* Now lets pop all the stack into output: */
           while (StackPtr != 0 && i < LineLen)
-            Line[i++] = Stack[--StackPtr];
+            Line[i++] = (GifPixelType)Stack[--StackPtr];
         }
-        if (LastCode != NO_SUCH_CODE && Prefix[RunningCode - 2] == NO_SUCH_CODE)
+        if (LastCode != NO_SUCH_CODE && Prefix[this->RunningCode - 2] == NO_SUCH_CODE)
         {
-          Prefix[RunningCode - 2] = LastCode;
+          Prefix[this->RunningCode - 2] = LastCode;
 
-          if (CrntCode == RunningCode - 2)
+          if (CrntCode == this->RunningCode - 2)
           {
             /* Only allowed if CrntCode is exactly the running code:
             * In that case CrntCode = XXXCode, CrntCode or the
             * prefix code is last code and the suffix char is
             * exactly the prefix of last code! */
-            Suffix[RunningCode - 2] = GetPrefixChar(&Prefix[0], LastCode, ClearCode);
+            Suffix[this->RunningCode - 2] = GetPrefixChar(LastCode, ClearCode);
           }
           else
           {
-            Suffix[RunningCode - 2] = GetPrefixChar(&Prefix[0], CrntCode, ClearCode);
+            Suffix[this->RunningCode - 2] = GetPrefixChar(CrntCode, ClearCode);
           }
         }
         LastCode = CrntCode;
       }
     }
+    this->LastCode = LastCode;
+    this->StackPtr = StackPtr;
   }
 
   void GetLine(USERDATA& userData, GifPixelType *line, int lineLen)
@@ -476,38 +477,24 @@ public:
     if (!lineLen)
       throw std::runtime_error("invalid line length");
 
-    DecompressLine(userData, line, lineLen);
+    if ((PixelCount -= lineLen) > 0xffff0000UL)
     {
-      if (PixelCount == 0)
-      {
-        /* We probably won't be called any more, so let's clean up
-        * everything before we return: need to flush out all the
-        * rest of image until an empty block (size 0)
-        * detected. We use GetCodeNext.
-        */
-
-        while (GetCodeNext(userData, &Dummy));
-      }
+      throw std::runtime_error("data too big");
     }
+
+    DecompressLine(userData, line, lineLen);
+    if (PixelCount == 0)
+    {
+      /* We probably won't be called any more, so let's clean up
+      * everything before we return: need to flush out all the
+      * rest of image until an empty block (size 0)
+      * detected. We use GetCodeNext.
+      */
+
+      while (GetCodeNext(userData, &Dummy));
+    }
+    
   }
-private:
-  GifWord BitsPerPixel;     /* Bits per pixel (Codes uses at least this + 1). */
-  GifWord ClearCode;   /* The CLEAR LZ code. */
-  GifWord EOFCode;     /* The EOF LZ code. */
-  GifWord RunningCode; /* The next code algorithm can generate. */
-  GifWord RunningBits; /* The number of bits required to represent RunningCode. */
-  GifWord MaxCode1;    /* 1 bigger than max. possible code, in RunningBits bits. */
-  GifWord LastCode;    /* The code before the current code. */
-  GifWord CrntCode;    /* Current algorithm code. */
-  GifWord StackPtr;    /* For character stack (see below). */
-  GifWord CrntShiftState;    /* Number of bits in CrntShiftDWord. */
-  unsigned long CrntShiftDWord;   /* For bytes decomposition into codes. */
-  unsigned long PixelCount;   /* Number of pixels in image. */
-  std::array<GifByteType, 256> Buf;   /* Compressed input is buffered here. */
-  std::array<GifByteType, LZ_MAX_CODE + 1> Stack; /* Decoded pixels are stacked here. */
-  std::array<GifByteType, LZ_MAX_CODE + 1> Suffix;    /* So we can trace the codes. */
-  std::array<GifPrefixType, LZ_MAX_CODE + 1> Prefix;
-  bool gif89;
 };
 
 
@@ -587,7 +574,7 @@ public:
       }
     }
   }
-  int Slurp(UCALLBACK& userData)
+  void Slurp(UCALLBACK& userData)
   {
     struct revertHelper
     {
@@ -606,14 +593,17 @@ public:
       }
     };
     revertHelper helper(userData);
-
+    std::vector<ExtensionBlock> localExtensionBlocks;
     for (;;)
     {
       switch (GetRecordType(userData))
       {
         case IMAGE_DESC_RECORD_TYPE:
         {
+          ExtensionBlocks = localExtensionBlocks;
           SavedImages.emplace_back(LoadImage(userData));
+          localExtensionBlocks.clear();
+          helper.checkpoint();
           break;
         }
 
@@ -623,33 +613,34 @@ public:
           /* Create an extension block with our data */
           if (extensionBlock.Bytes.size() > 0)
           {
-            ExtensionBlocks.push_back(extensionBlock);
+            localExtensionBlocks.push_back(extensionBlock);
           }
           while (extensionBlock.Bytes.size() > 0)
           {
             extensionBlock = GetExtensionNext(userData);
-            ExtensionBlocks.push_back(extensionBlock);
+            localExtensionBlocks.push_back(extensionBlock);
           }
-          helper.checkpoint();
+          
           break;
         }
 
         case TERMINATE_RECORD_TYPE:
+          ExtensionBlocks = localExtensionBlocks;
+          return;
           break;
 
         default:    /* Should be trapped by DGifGetRecordType */
           break;
       }
-
-      helper.checkpoint();
     }
+    ExtensionBlocks = localExtensionBlocks;
   }
 private:
   SavedImage LoadImage(UCALLBACK& userData)
   {
     SavedImage image;
     image.ImageDesc = GetImageDesc(userData);
-    GifDecompressor < typename UCALLBACK > decompressor(userData, Gif89);
+    GifDecompressor < typename UCALLBACK > decompressor(userData, image.ImageDesc.Width * image.ImageDesc.Height);
     if (image.ImageDesc.Width < 0 && image.ImageDesc.Height < 0 &&
       image.ImageDesc.Width >(INT_MAX / image.ImageDesc.Height))
     {

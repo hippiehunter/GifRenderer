@@ -14,8 +14,8 @@ void gif_user_data::readSome()
     {
       if (loadOp.get() >= 256 *  1024)
         finishedReader = true;
-      else
-        finishedData = true;
+      //else
+        //finishedData = true;
     }
     catch (...)
     {
@@ -100,8 +100,6 @@ void loadGifFrame(GIFTYPE& gifFile, const std::vector<GifFrame>& frames, std::un
 {
 	uint32_t width = gifFile->SWidth;
 	uint32_t height = gifFile->SHeight;
-	int loopCount = 0;
-	bool hasLoop = true;
 
 	bgraColor bgColor;
   if (gifFile->SColorMap.Colors.size() != 0 && gifFile->SBackGroundColor > 0)
@@ -125,10 +123,6 @@ void loadGifFrame(GIFTYPE& gifFile, const std::vector<GifFrame>& frames, std::un
 
 		if (currentFrame > targetFrame)
 			currentFrame = 0;
-
-
-		uint8_t* bufPtr = (uint8_t*)buffer.get();
-		uint8_t* lastFramePtr = (uint8_t*)lastFrame.get();
 
 		for (decltype(height) y = 0; y < height; y++)
 		{
@@ -180,8 +174,6 @@ void loadGifFrames(GIFTYPE& gifFile, std::vector<GifFrame>& frames)
 {
 	uint32_t width = gifFile->SWidth;
 	uint32_t height = gifFile->SHeight;
-	int loopCount = 0;
-	bool hasLoop = true;
 
 	for (auto i = frames.size(); i < gifFile->SavedImages.size(); i++)
 	{
@@ -235,7 +227,6 @@ GifLoader::GifLoader(Windows::Foundation::Collections::IVector<std::uint8_t>^ in
 	dataReader->InputStreamOptions = Windows::Storage::Streams::InputStreamOptions::ReadAhead;
   _loaderData = { 0, std::vector<uint8_t>(begin(initialData), end(initialData)), dataReader, false, false, false };
   _loaderData.readSome();
-	int error = 0;
 	
   try
   {
@@ -281,7 +272,6 @@ GifLoader::GifLoader(Windows::Foundation::Collections::IVector<std::uint8_t>^ in
 
 GifLoader::~GifLoader() 
 {
-	int error = 0;
 	if (_loaderData.reader != nullptr)
   {
     delete _loaderData.reader;
