@@ -149,8 +149,6 @@ void loadGifFrame(GIFTYPE& gifFile, const std::vector<GifFrame>& frames, std::un
 			memcpy(lastFrame.get(), buffer.get(), width * height * sizeof(uint32_t));
 		}
 
-		mapRasterBits(decodeFrame.RasterBits.get(), buffer, colorMap, frame.top, frame.left, frame.bottom, frame.right, width, frame.transparentColor);
-
 		switch (disposal)
 		{
 		case DISPOSAL_METHODS::DM_BACKGROUND:
@@ -167,6 +165,8 @@ void loadGifFrame(GIFTYPE& gifFile, const std::vector<GifFrame>& frames, std::un
 			memcpy(buffer.get(), lastFrame.get(), width * height * sizeof(uint32_t));
 			break;
 		}
+
+    mapRasterBits(decodeFrame.RasterBits.get(), buffer, colorMap, frame.top, frame.left, frame.bottom, frame.right, width, frame.transparentColor);
 	}
 }
 template<typename GIFTYPE>
