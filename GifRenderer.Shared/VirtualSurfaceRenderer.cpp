@@ -27,7 +27,7 @@ VirtualSurfaceRenderer::VirtualSurfaceRenderer(Windows::Foundation::Collections:
 					auto providerInfo = providerInfoTask.get();
 					_imageSize = providerInfo->ImageSize;
 
-					if (!_suspended)
+          if (!_suspended)
 					{
 						if ((_imageSize.Width * _imageSize.Height) > (1024 * 1024))
 						{
@@ -47,9 +47,12 @@ VirtualSurfaceRenderer::VirtualSurfaceRenderer(Windows::Foundation::Collections:
 							create_task(_streamImageSource->GetBitmapAsync(ref new Bitmap(Windows::Foundation::Size(_imageSize.Width * _overallImageScale, _imageSize.Height * _overallImageScale), ColorMode::Bgra8888), OutputOption::PreserveAspectRatio))
 								.then([=](Bitmap^ bitmap)
 							{
-								_overallBitmap = bitmap;
-								_filterState = FilterState::WAIT;
-								ThrowIfFailed(_sisNative->Invalidate(RECT{ 0, 0, _imageSize.Width, _imageSize.Height }));
+                if (!_suspended && _d3dDevice != nullptr && _sisNative != nullptr)
+                {
+                  _overallBitmap = bitmap;
+                  _filterState = FilterState::WAIT;
+                  ThrowIfFailed(_sisNative->Invalidate(RECT{ 0, 0, _imageSize.Width, _imageSize.Height }));
+                }
 							});
 						}
 						else
