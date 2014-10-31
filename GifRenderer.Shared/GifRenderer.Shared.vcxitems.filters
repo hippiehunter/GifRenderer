@@ -13,6 +13,9 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)inc\GifLoader.h">
       <Filter>inc</Filter>
     </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)VirtualSurfaceRenderer.h">
+      <Filter>inc</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)inc\GifConverter.cpp">
@@ -22,6 +25,9 @@
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)src\GifRenderer.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)VirtualSurfaceRenderer.cpp">
       <Filter>src</Filter>
     </ClCompile>
   </ItemGroup>

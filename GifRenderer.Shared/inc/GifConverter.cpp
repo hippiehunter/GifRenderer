@@ -1,5 +1,7 @@
 #include <cstdint>
 #include <GifRenderer.h>
+#include <VirtualSurfaceRenderer.h>
+#include <ppltasks.h>
 
 namespace GifRenderer
 {
@@ -45,10 +47,16 @@ namespace GifRenderer
           return ref new ::GifRenderer::GifRenderer(dataValue->initialData, dataValue->inputStream);
         else
         {
-          if (dataValue->inputStream != nullptr)
-            delete dataValue->inputStream;
-          dataValue->inputStream = nullptr;
-          return ref new StillImage(dataValue->url);
+			/*if (dataValue->initialData != nullptr)
+				dataValue->initialData->Clear();
+			if (dataValue->inputStream != nullptr)
+			{
+				delete dataValue->inputStream;
+				dataValue->inputStream = nullptr;
+			}
+
+			return ref new StillImage(dataValue->url);*/
+          return ref new VirtualSurfaceRenderer(dataValue->initialData, dataValue->inputStream);
         }
 
       }

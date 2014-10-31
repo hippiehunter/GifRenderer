@@ -53,7 +53,7 @@ namespace TestUI
 		public object data {get; set;}
 		public List<string> TestUrls = new List<string>
 		{
-			"https://imagetestsuite.googlecode.com/svn/trunk/gif/0646caeb9b9161c777f117007921a687.gif"
+			"http://i.imgur.com/wslRh9m.gif"
 		};
 		private async void Button_Click(object sender, RoutedEventArgs e)
 		{
