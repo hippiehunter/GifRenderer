@@ -22,8 +22,8 @@ namespace GifRenderer
   using Windows::ApplicationModel::SuspendingEventArgs;
   using namespace Microsoft::WRL;
 
-  [Windows::UI::Xaml::Data::Bindable]
-  public ref class VirtualSurfaceRenderer sealed : public Windows::UI::Xaml::Data::INotifyPropertyChanged
+  [Windows::Foundation::Metadata::WebHostHidden]
+  public ref class VirtualSurfaceRenderer sealed
   {
   private:
     void Update();
@@ -32,17 +32,23 @@ namespace GifRenderer
     {
     private:
       Platform::WeakReference _rendererReference;
-    public:
+	public:
       VirtualSurfaceUpdatesCallbackNative(VirtualSurfaceRenderer^ renderer) : _rendererReference(renderer)
       {
       }
-
       virtual HRESULT STDMETHODCALLTYPE UpdatesNeeded()
       {
-        VirtualSurfaceRenderer^ renderer = _rendererReference.Resolve<VirtualSurfaceRenderer>();
-        if (renderer != nullptr && !renderer->_suspended)
-          renderer->Update();
-        return S_OK;
+		  try
+		  {
+			  VirtualSurfaceRenderer^ renderer = _rendererReference.Resolve<VirtualSurfaceRenderer>();
+			  if (renderer != nullptr && !renderer->_suspended)
+			  {
+				  renderer->Update();
+				  return S_OK;
+			  }
+		  }
+		  catch (...) { }
+		  return E_FAIL;
       }
     };
 
@@ -57,18 +63,21 @@ namespace GifRenderer
     Microsoft::WRL::ComPtr<IVirtualSurfaceImageSourceNative> _sisNative;
     Microsoft::WRL::ComPtr<ID2D1DeviceContext> _d2dContext;
     Microsoft::WRL::ComPtr<ID2D1Bitmap> _renderBitmap;
-	Microsoft::WRL::ComPtr<ID2D1Bitmap> _specificBitmap;
+	Microsoft::WRL::ComPtr<ID2D1Bitmap> _originalBitmap;
     Windows::Foundation::Size _imageSize;
-    Nokia::Graphics::Imaging::RandomAccessStreamImageSource^ _streamImageSource;
+	std::function<void(int,int)> _updateCallback;
+	Windows::Storage::Streams::IRandomAccessStream^ _fileStream;
 	float _overallImageScale;
 	float _specificImageScale;
 	RECT _specificRender;
-    Nokia::Graphics::Imaging::Bitmap^ _overallBitmap;
-    Object^ _imageSource;
+	RECT _lastRender;
+	int _currentWidth;
+	int _currentHeight;
+	float _maxRenderDimension;
+	Windows::UI::Xaml::Media::ImageSource^ _imageSource;
     DisplayInformation^ _displayInfo;
     Windows::Foundation::EventRegistrationToken _suspendingCookie;
     Windows::Foundation::EventRegistrationToken _resumingCookie;
-    bool _needsRender;
     bool _suspended;
     FilterState _filterState;
     // Direct3D device
@@ -76,21 +85,17 @@ namespace GifRenderer
     // Direct2D object
     Microsoft::WRL::ComPtr<ID2D1Device> _d2dDevice;
 
-    concurrency::task<Nokia::Graphics::Imaging::RandomAccessStreamImageSource^> VirtualSurfaceRenderer::GetImageSource(
+	concurrency::task<Windows::Storage::Streams::IRandomAccessStream^> VirtualSurfaceRenderer::GetImageSource(
       Windows::Foundation::Collections::IVector<std::uint8_t>^ initialData,
       Windows::Storage::Streams::IInputStream^ inputStream);
 
     concurrency::task<void> LoadSome(Windows::Storage::Streams::IInputStream^ inputStream, Windows::Storage::Streams::DataWriter^ target);
-
     void OnSuspending(Object ^sender, SuspendingEventArgs ^e);
-
     void OnResuming(Object ^sender, Object ^e);
-
-   
     void CreateDeviceResources();
     void BeginDraw(POINT& offset, RECT& updateNativeRect);
+	bool DrawRequested(POINT offset, RECT requestedRegion, RECT overallRequested);
     void EndDraw();
-    bool Update(float total, float delta);
 
     inline void ThrowIfFailed(HRESULT hr)
     {
@@ -100,13 +105,17 @@ namespace GifRenderer
       }
     }
 
+  internal:
+	  VirtualSurfaceRenderer(Windows::Foundation::Collections::IVector<std::uint8_t>^ initialData, Windows::Storage::Streams::IInputStream^ inputStream, std::function<void(int,int)>& fn);
+
+	  void ViewChanging(Platform::Object^ sender, Windows::UI::Xaml::Controls::ScrollViewerViewChangingEventArgs^ e);
+	  void ViewChanged(Platform::Object^ sender, Windows::UI::Xaml::Controls::ScrollViewerViewChangedEventArgs^ e);
+
   public:
-	virtual event Windows::UI::Xaml::Data::PropertyChangedEventHandler^ PropertyChanged;
-    VirtualSurfaceRenderer(Windows::Foundation::Collections::IVector<std::uint8_t>^ initialData, Windows::Storage::Streams::IInputStream^ inputStream);
-    property Object^ ImageSource
+    property Windows::UI::Xaml::Media::ImageSource^ ImageSource
     {
-		Object^ get();
+		Windows::UI::Xaml::Media::ImageSource^ get();
     }
-    virtual ~VirtualSurfaceRenderer();
+	virtual ~VirtualSurfaceRenderer();
   };
 }

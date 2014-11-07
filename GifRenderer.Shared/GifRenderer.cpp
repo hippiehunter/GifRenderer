@@ -1,3 +1,4 @@
+#include "pch.h"
 #include "GifRenderer.h"
 
 using namespace GifRenderer;
@@ -254,7 +255,7 @@ bool GR::Update(float total, float delta)
 
     accountedFor += _gifLoader->GetFrameDelay(i);
   }
-  auto newFrame = max(i - 1, 0);
+  auto newFrame = std::max<int>((int)i - 1, 0);
   if (newFrame != _currentFrame || _currentFrame == 0)
   {
     _currentFrame = newFrame;

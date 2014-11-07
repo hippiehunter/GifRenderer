@@ -1,42 +1,26 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <ClInclude Include="$(MSBuildThisFileDirectory)inc\BasicTimer.h">
-      <Filter>inc</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)inc\GifRenderer.h">
-      <Filter>inc</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)giflibpp.h">
-      <Filter>inc</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)inc\GifLoader.h">
-      <Filter>inc</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)VirtualSurfaceRenderer.h">
-      <Filter>inc</Filter>
-    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)pch.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)VirtualSurfaceRenderer.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)BasicTimer.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)giflibpp.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)GifLoader.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)GifRenderer.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)GifConverter.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)ZoomableImageControl.xaml.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="$(MSBuildThisFileDirectory)inc\GifConverter.cpp">
-      <Filter>src</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)pch.cpp">
+      <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)src\GifLoader.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)src\GifRenderer.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)VirtualSurfaceRenderer.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)GifConverter.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)GifLoader.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)GifRenderer.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)VirtualSurfaceRenderer.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)ZoomableImageControl.xaml.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <Filter Include="inc">
-      <UniqueIdentifier>{9de984d9-691e-406d-b314-8e46785364cb}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="src">
-      <UniqueIdentifier>{0ce3ead5-47b9-4d75-9d40-0328bea25732}</UniqueIdentifier>
-    </Filter>
+    <Page Include="$(MSBuildThisFileDirectory)ZoomableImageControl.xaml" />
   </ItemGroup>
 </Project>

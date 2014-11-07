@@ -22,7 +22,7 @@
     <None Include="packages.config" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{57985DF4-90BC-4B9F-B1FC-291A30A48156}</ProjectGuid>
+    <ProjectGuid>{36b78bff-2723-4932-b8f0-b19b231bf73c}</ProjectGuid>
     <RootNamespace>GifRenderer</RootNamespace>
     <DefaultLanguage>en-US</DefaultLanguage>
     <MinimumVisualStudioVersion>12.0</MinimumVisualStudioVersion>
@@ -30,10 +30,7 @@
     <ApplicationType>Windows Phone</ApplicationType>
     <ApplicationTypeRevision>8.1</ApplicationTypeRevision>
     <ConvergedProjectType>CodeSharingWindowsRuntimeComponent</ConvergedProjectType>
-    <PrecompiledHeader>NotUsing</PrecompiledHeader>
-    <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\..\</SolutionDir>
-    <RestorePackages>true</RestorePackages>
-    <NuGetPackageImportStamp>cf066f2a</NuGetPackageImportStamp>
+    <NuGetPackageImportStamp>2ec25f85</NuGetPackageImportStamp>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -82,11 +79,15 @@
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
-      <PrecompiledHeader>NotUsing</PrecompiledHeader>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_WINRT_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PreprocessorDefinitions>NOMINMAX;WINDOWS_PHONE_APP;_WINRT_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)pch.pch</PrecompiledHeaderOutputFile>
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
       <SDLCheck>true</SDLCheck>
+      <FloatingPointModel>Precise</FloatingPointModel>
       <WarningLevel>Level4</WarningLevel>
+      <SmallerTypeCheck>true</SmallerTypeCheck>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -96,11 +97,15 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
-      <PrecompiledHeader>NotUsing</PrecompiledHeader>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_WINRT_DLL;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PreprocessorDefinitions>NOMINMAX;WINDOWS_PHONE_APP;_WINRT_DLL;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)pch.pch</PrecompiledHeaderOutputFile>
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
       <SDLCheck>true</SDLCheck>
+      <FloatingPointModel>Precise</FloatingPointModel>
       <WarningLevel>Level4</WarningLevel>
+      <SmallerTypeCheck>false</SmallerTypeCheck>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -110,11 +115,15 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">
     <ClCompile>
-      <PrecompiledHeader>NotUsing</PrecompiledHeader>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_WINRT_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PreprocessorDefinitions>NOMINMAX;WINDOWS_PHONE_APP;_WINRT_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)pch.pch</PrecompiledHeaderOutputFile>
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
       <SDLCheck>true</SDLCheck>
+      <FloatingPointModel>Precise</FloatingPointModel>
       <WarningLevel>Level4</WarningLevel>
+      <SmallerTypeCheck>true</SmallerTypeCheck>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -124,11 +133,15 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">
     <ClCompile>
-      <PrecompiledHeader>NotUsing</PrecompiledHeader>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_WINRT_DLL;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PreprocessorDefinitions>NOMINMAX;WINDOWS_PHONE_APP;_WINRT_DLL;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)pch.pch</PrecompiledHeaderOutputFile>
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
       <SDLCheck>true</SDLCheck>
+      <FloatingPointModel>Precise</FloatingPointModel>
       <WarningLevel>Level4</WarningLevel>
+      <SmallerTypeCheck>false</SmallerTypeCheck>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -137,7 +150,10 @@
     </Link>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
-  <Import Project="..\..\packages\directxtk.2.22.13.23\build\native\directxtk.targets" Condition="Exists('..\..\packages\directxtk.2.22.13.23\build\native\directxtk.targets')" />
+  <ImportGroup Label="ExtensionTargets">
+    <Import Project="..\..\packages\directxtk.2.22.13.23\build\native\directxtk.targets" Condition="Exists('..\..\packages\directxtk.2.22.13.23\build\native\directxtk.targets')" />
+    <Import Project="..\..\packages\NokiaImagingSDK.1.2.151\build\native\NokiaImagingSDK.targets" Condition="Exists('..\..\packages\NokiaImagingSDK.1.2.151\build\native\NokiaImagingSDK.targets')" />
+  </ImportGroup>
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
       <ErrorText>This project references NuGet package(s) that are missing on this computer. Enable NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
@@ -145,5 +161,4 @@
     <Error Condition="!Exists('..\..\packages\directxtk.2.22.13.23\build\native\directxtk.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\directxtk.2.22.13.23\build\native\directxtk.targets'))" />
     <Error Condition="!Exists('..\..\packages\NokiaImagingSDK.1.2.151\build\native\NokiaImagingSDK.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\NokiaImagingSDK.1.2.151\build\native\NokiaImagingSDK.targets'))" />
   </Target>
-  <Import Project="..\..\packages\NokiaImagingSDK.1.2.151\build\native\NokiaImagingSDK.targets" Condition="Exists('..\..\packages\NokiaImagingSDK.1.2.151\build\native\NokiaImagingSDK.targets')" />
 </Project>

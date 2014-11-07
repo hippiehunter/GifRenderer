@@ -3,28 +3,46 @@
   <PropertyGroup Label="Globals">
     <MSBuildAllProjects>$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
     <HasSharedItems>true</HasSharedItems>
-    <ItemsProjectGuid>{ed38c92b-f8d2-459b-9a7f-4a215d689993}</ItemsProjectGuid>
+    <ItemsProjectGuid>{6f0246c2-61bc-4661-b78b-f563db8b5a0e}</ItemsProjectGuid>
     <ItemsRootNamespace>GifRenderer</ItemsRootNamespace>
     <ItemsProjectName>GifRenderer.Shared</ItemsProjectName>
     <CodeSharingProject>248F659F-DAC5-46E8-AC09-60EC9FC95053</CodeSharingProject>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
-      <AdditionalIncludeDirectories>$(MSBuildThisFileDirectory)inc\;%(AdditionalIncludeDirectories);$(MSBuildThisFileDirectory)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(MSBuildThisFileDirectory)</AdditionalIncludeDirectories>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="$(MSBuildThisFileDirectory)inc\GifConverter.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)src\GifLoader.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)src\GifRenderer.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)VirtualSurfaceRenderer.cpp" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)BasicTimer.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)GifConverter.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)giflibpp.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)inc\BasicTimer.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)inc\GifLoader.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)inc\GifRenderer.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)GifLoader.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)GifRenderer.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)pch.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)VirtualSurfaceRenderer.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)ZoomableImageControl.xaml.h">
+      <DependentUpon>$(MSBuildThisFileDirectory)ZoomableImageControl.xaml</DependentUpon>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="$(MSBuildThisFileDirectory)GifConverter.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)GifLoader.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)GifRenderer.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)pch.cpp">
+      <PrecompiledHeader>Create</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)VirtualSurfaceRenderer.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)ZoomableImageControl.xaml.cpp">
+      <DependentUpon>$(MSBuildThisFileDirectory)ZoomableImageControl.xaml</DependentUpon>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ProjectCapability Include="SourceItemsFromImports" />
+  </ItemGroup>
+  <ItemGroup>
+    <Page Include="$(MSBuildThisFileDirectory)ZoomableImageControl.xaml">
+      <SubType>Designer</SubType>
+    </Page>
   </ItemGroup>
 </Project>

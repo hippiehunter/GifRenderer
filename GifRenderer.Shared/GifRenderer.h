@@ -22,7 +22,7 @@ namespace GifRenderer
   using Windows::UI::Xaml::SuspendingEventHandler;
   using Windows::ApplicationModel::SuspendingEventArgs;
   using namespace Microsoft::WRL;
-
+  [Windows::Foundation::Metadata::WebHostHidden]
   public ref class GifRenderer sealed
   {
   private:

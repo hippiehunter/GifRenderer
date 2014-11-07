@@ -633,7 +633,6 @@ public:
           break;
       }
     }
-    ExtensionBlocks = localExtensionBlocks;
   }
 private:
   SavedImage LoadImage(UCALLBACK& userData)
