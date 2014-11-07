@@ -421,6 +421,10 @@ void VirtualSurfaceRenderer::Update()
 						}
 						catch (...){}
 					}
+          else
+          {
+            _specificRender = RECT{ 0, 0, 0, 0 };
+          }
 					_filterState = FilterState::WAIT;
 				});
 				break;
@@ -464,8 +468,8 @@ bool VirtualSurfaceRenderer::DrawRequested(POINT offset, RECT requested, RECT ov
 	if (_renderBitmap != nullptr && _filterState == FilterState::WAIT && _specificRender == overallRequested)
 	{
 		_d2dContext->SetTransform(
-			D2D1::Matrix3x2F::Translation(static_cast<float>(offset.x),
-			static_cast<float>((offset.y))));
+      D2D1::Matrix3x2F::Translation(static_cast<float>(offset.x) - (requested.left - _specificRender.left),
+      static_cast<float>(offset.y) - (requested.top - _specificRender.top)));
 
 		_d2dContext->DrawBitmap(_renderBitmap.Get());
 		return false;
