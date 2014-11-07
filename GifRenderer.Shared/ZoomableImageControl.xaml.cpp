@@ -91,14 +91,6 @@ void ::GifRenderer::ZoomableImageControl::UserControl_Unloaded(Platform::Object^
 	_gifRenderer = nullptr;
 }
 
-
-void ::GifRenderer::ZoomableImageControl::scrollViewer_ViewChanging(Platform::Object^ sender, Windows::UI::Xaml::Controls::ScrollViewerViewChangingEventArgs^ e)
-{
-	if (_virtualSurfaceRenderer != nullptr)
-		_virtualSurfaceRenderer->ViewChanging(sender, e);
-}
-
-
 void ::GifRenderer::ZoomableImageControl::scrollViewer_ViewChanged(Platform::Object^ sender, Windows::UI::Xaml::Controls::ScrollViewerViewChangedEventArgs^ e)
 {
 	if (_virtualSurfaceRenderer != nullptr)

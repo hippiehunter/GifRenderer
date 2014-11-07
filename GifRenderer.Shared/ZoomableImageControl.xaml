@@ -16,7 +16,7 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
-        <ScrollViewer x:Name="scrollViewer" ViewChanging="scrollViewer_ViewChanging" ViewChanged="scrollViewer_ViewChanged" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" IsHorizontalRailEnabled="True" ZoomMode="Enabled">
+        <ScrollViewer x:Name="scrollViewer" ViewChanged="scrollViewer_ViewChanged" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" IsHorizontalRailEnabled="True" ZoomMode="Enabled">
             <Image x:Name="image" HorizontalAlignment="Center" VerticalAlignment="Center" SizeChanged="image_SizeChanged"
                 Stretch="Fill"/>
         </ScrollViewer>

@@ -542,22 +542,6 @@ concurrency::task<Windows::Storage::Streams::IRandomAccessStream^> VirtualSurfac
 	});
 }
 
-void VirtualSurfaceRenderer::ViewChanging(Platform::Object^ sender, Windows::UI::Xaml::Controls::ScrollViewerViewChangingEventArgs^ e)
-{
-	auto reframeWidth = (_imageSize.Width * std::min(1.0f, e->FinalView->ZoomFactor));
-	auto reframeHeight = (_imageSize.Height * std::min(1.0f, e->FinalView->ZoomFactor));
-	if (std::min((int) reframeWidth, (int) _imageSize.Width) != _currentWidth || std::min((int) reframeHeight, (int) _imageSize.Height) != _currentHeight)
-	{
-		_currentHeight = std::min((int) reframeHeight, (int) _imageSize.Height);
-		_currentWidth = std::min((int) reframeWidth, (int) _imageSize.Width);
-		if (_sisNative != nullptr)
-		{
-			_sisNative->Resize(reframeWidth, reframeHeight);
-			_sisNative->Invalidate(RECT{ 0, 0, reframeWidth, reframeHeight });
-		}
-	}	
-}
-
 void VirtualSurfaceRenderer::ViewChanged(Platform::Object^ sender, Windows::UI::Xaml::Controls::ScrollViewerViewChangedEventArgs^ e)
 {
 	auto reframeWidth = (_imageSize.Width * std::min(1.0f, dynamic_cast<Windows::UI::Xaml::Controls::ScrollViewer^>(sender)->ZoomFactor));
