@@ -59,6 +59,7 @@ void ::GifRenderer::ZoomableImageControl::UserControl_DataContextChanged(Windows
 		{
 			_gifRenderer = ref new ::GifRenderer::GifRenderer(gifPayLoad->initialData, gifPayLoad->inputStream);
 			image->Source = _gifRenderer->ImageSource;
+      FadeIn->Begin();
 		}
 		else
 		{
@@ -69,9 +70,30 @@ void ::GifRenderer::ZoomableImageControl::UserControl_DataContextChanged(Windows
 					image->Height = height;
 					image->Width = width;
 					image->Source = _virtualSurfaceRenderer->ImageSource;
+          FadeIn->Begin();
 				}
 			});
-			_virtualSurfaceRenderer = ref new VirtualSurfaceRenderer(gifPayLoad->initialData, gifPayLoad->inputStream, fn);
+
+      _loadedByteCount = gifPayLoad->initialData->Size;
+      std::function<void(int)> loadCallback([=](int loadedBytes)
+      {
+        if (gifPayLoad->expectedSize > 0)
+        {
+          _loadedByteCount += loadedBytes;
+          double loadPercent = static_cast<double>(_loadedByteCount) / static_cast<double>(gifPayLoad->expectedSize);
+          double Angle = 2 * 3.14159265 * loadPercent;
+
+          double X = 12 - std::sin(Angle) * 12;
+          double Y = 12 + std::cos(Angle) * 12;
+
+          if (loadPercent > 0 && (int)X == 12 && (int)Y == 24)
+            X += 0.01; // Never make the end the same as the start!
+
+          TheSegment->IsLargeArc = Angle >= 3.14159265;
+          TheSegment->Point = Point(X, Y);
+        }
+      });
+      _virtualSurfaceRenderer = ref new VirtualSurfaceRenderer(gifPayLoad->initialData, gifPayLoad->inputStream, fn, loadCallback);
 		}
 	}
 }

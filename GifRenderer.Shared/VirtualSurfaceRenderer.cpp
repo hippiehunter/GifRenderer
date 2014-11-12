@@ -6,8 +6,10 @@
 using namespace concurrency;
 using namespace GifRenderer;
 using namespace Nokia::Graphics::Imaging;
-VirtualSurfaceRenderer::VirtualSurfaceRenderer(Windows::Foundation::Collections::IVector<std::uint8_t>^ initialData, Windows::Storage::Streams::IInputStream^ inputStream, std::function<void(int, int)>& fn)
+VirtualSurfaceRenderer::VirtualSurfaceRenderer(Windows::Foundation::Collections::IVector<std::uint8_t>^ initialData, 
+  Windows::Storage::Streams::IInputStream^ inputStream, std::function<void(int, int)>& fn, std::function<void(int)> loadCallback)
 {
+  _loadCallback = loadCallback;
 	_updateCallback = fn;
 #if WINDOWS_PHONE_APP
 	_maxRenderDimension = Windows::System::MemoryManager::AppMemoryUsageLimit > 300 * 1024 * 1024 ? 1024.0f : 512.0f;
@@ -79,6 +81,9 @@ VirtualSurfaceRenderer::VirtualSurfaceRenderer(Windows::Foundation::Collections:
 									properties.pixelFormat = D2D1_PIXEL_FORMAT{ DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_IGNORE };
 
 									ThrowIfFailed(_d2dContext->CreateBitmap(size, bufferData, bitmap->Buffers->Data[0]->Pitch, properties, _originalBitmap.ReleaseAndGetAddressOf()));
+
+                  RECT invalidateRect{ 0, 0, _currentWidth, _currentHeight };
+                  _sisNative->Invalidate(invalidateRect);
 
 									_filterState = FilterState::WAIT;
 								}
@@ -498,6 +503,8 @@ concurrency::task<void> VirtualSurfaceRenderer::LoadSome(Windows::Storage::Strea
 		{
 			auto bufferResult = buffer.get();
 			auto bufferSize = bufferResult->Length;
+      if (_loadCallback != nullptr)
+        _loadCallback(bufferSize);
 			target->WriteBuffer(bufferResult, 0, bufferSize);
 			if (bufferResult->Length >= 32 * 1024)
 				return LoadSome(inputStream, target);
@@ -505,6 +512,7 @@ concurrency::task<void> VirtualSurfaceRenderer::LoadSome(Windows::Storage::Strea
 		catch (...)
 		{
 		}
+    _loadCallback = nullptr;
 		return task_from_result();
 	});
 }

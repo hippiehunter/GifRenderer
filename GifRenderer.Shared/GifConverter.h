@@ -8,6 +8,7 @@ namespace GifRenderer
 	public:
 		property Windows::Foundation::Collections::IVector<std::uint8_t>^ initialData;
 		property Windows::Storage::Streams::IInputStream^ inputStream;
+    property int expectedSize;
 		property Platform::String^ url;
 	};
 

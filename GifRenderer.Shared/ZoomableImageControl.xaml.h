@@ -20,6 +20,7 @@ namespace GifRenderer
 		::GifRenderer::GifRenderer^ _gifRenderer;
 		::GifRenderer::VirtualSurfaceRenderer^ _virtualSurfaceRenderer;
 		bool _initialSizeChanged;
+    int _loadedByteCount;
 
 		void UserControl_DataContextChanged(Windows::UI::Xaml::FrameworkElement^ sender, Windows::UI::Xaml::DataContextChangedEventArgs^ args);
 		void ZoomToContent();

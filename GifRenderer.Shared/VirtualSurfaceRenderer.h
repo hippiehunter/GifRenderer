@@ -66,6 +66,7 @@ namespace GifRenderer
 	Microsoft::WRL::ComPtr<ID2D1Bitmap> _originalBitmap;
     Windows::Foundation::Size _imageSize;
 	std::function<void(int,int)> _updateCallback;
+  std::function<void(int)> _loadCallback;
 	Windows::Storage::Streams::IRandomAccessStream^ _fileStream;
 	float _overallImageScale;
 	float _specificImageScale;
@@ -106,7 +107,9 @@ namespace GifRenderer
     }
 
   internal:
-	  VirtualSurfaceRenderer(Windows::Foundation::Collections::IVector<std::uint8_t>^ initialData, Windows::Storage::Streams::IInputStream^ inputStream, std::function<void(int,int)>& fn);
+	  VirtualSurfaceRenderer(Windows::Foundation::Collections::IVector<std::uint8_t>^ initialData,
+      Windows::Storage::Streams::IInputStream^ inputStream, std::function<void(int,int)>& fn,
+      std::function<void(int)> loadCallback);
 	  void ViewChanged(Platform::Object^ sender, Windows::UI::Xaml::Controls::ScrollViewerViewChangedEventArgs^ e);
 
   public:
