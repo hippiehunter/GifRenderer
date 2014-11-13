@@ -43,7 +43,7 @@
                                     <PathFigure StartPoint="12,24">
                                         <PathFigure.Segments>
                                             <PathSegmentCollection>
-                                                <ArcSegment x:Name="TheSegment" Size="32,32" IsLargeArc="False" SweepDirection="Clockwise" Point="32,64" />
+                                                <ArcSegment x:Name="TheSegment" Size="12,12" IsLargeArc="False" SweepDirection="Clockwise" Point="12,24" />
                                             </PathSegmentCollection>
                                         </PathFigure.Segments>
                                     </PathFigure>
@@ -56,7 +56,7 @@
                     <TranslateTransform X="2" Y="2"></TranslateTransform>
                 </Grid.RenderTransform>
             </Grid>
-            <TextBlock>Loading...</TextBlock>
+            <TextBlock FontSize="20">Loading...</TextBlock>
         </StackPanel>
         
 
