@@ -10,15 +10,6 @@
     d:DesignWidth="400" DataContextChanged="UserControl_DataContextChanged" Unloaded="UserControl_Unloaded">
 
     <UserControl.Resources>
-        <Storyboard x:Name="Storyboard1">
-            <PointAnimation EnableDependentAnimation="True"
-                    x:Name="ThePointAnimation"
-                    Storyboard.TargetName="TheSegment"
-                    Storyboard.TargetProperty="Point"
-                    Duration="0:0:0.01"
-                    To="20,20"
-                    RepeatBehavior="1x" />
-        </Storyboard>
         <Storyboard x:Name="FadeIn">
             <DoubleAnimation
                     x:Name="fadeInAnimation"
@@ -28,7 +19,7 @@
                     From="0" To="1"/>
             <DoubleAnimation
                     x:Name="fadeOutAnimation"
-                    Storyboard.TargetName="TheGrid"
+                    Storyboard.TargetName="progressStack"
                     Storyboard.TargetProperty="Opacity"
                     Duration="0:0:0.25"
                     From="1" To="0"/>
@@ -42,28 +33,32 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
-        <Grid x:Name="TheGrid" Width="28" Height="28" Margin="0,0,0,0" Background="Transparent" HorizontalAlignment="Center" VerticalAlignment="Center">
-            <Path x:Name="ThePath" Fill="Transparent" Stroke="#ff999999" StrokeThickness="4" StrokeDashCap="Flat">
-                <Path.Data>
-                    <PathGeometry>
-                        <PathGeometry.Figures>
-                            <PathFigureCollection>
-                                <PathFigure StartPoint="12,24">
-                                    <PathFigure.Segments>
-                                        <PathSegmentCollection>
-                                            <ArcSegment x:Name="TheSegment" Size="12,12" IsLargeArc="False" SweepDirection="Clockwise" Point="12,24" />
-                                        </PathSegmentCollection>
-                                    </PathFigure.Segments>
-                                </PathFigure>
-                            </PathFigureCollection>
-                        </PathGeometry.Figures>
-                    </PathGeometry>
-                </Path.Data>
-            </Path>
-            <Grid.RenderTransform>
-                <TranslateTransform X="2" Y="2"></TranslateTransform>
-            </Grid.RenderTransform>
-        </Grid>
+        <StackPanel x:Name="progressStack" Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Center">
+            <Grid x:Name="TheGrid" Width="64" Height="64" Margin="0,0,0,0" HorizontalAlignment="Center" VerticalAlignment="Center">
+                <Path x:Name="ThePath" Fill="Transparent" Stroke="#ff999999" StrokeThickness="8" StrokeDashCap="Flat">
+                    <Path.Data>
+                        <PathGeometry>
+                            <PathGeometry.Figures>
+                                <PathFigureCollection>
+                                    <PathFigure StartPoint="12,24">
+                                        <PathFigure.Segments>
+                                            <PathSegmentCollection>
+                                                <ArcSegment x:Name="TheSegment" Size="32,32" IsLargeArc="False" SweepDirection="Clockwise" Point="32,64" />
+                                            </PathSegmentCollection>
+                                        </PathFigure.Segments>
+                                    </PathFigure>
+                                </PathFigureCollection>
+                            </PathGeometry.Figures>
+                        </PathGeometry>
+                    </Path.Data>
+                </Path>
+                <Grid.RenderTransform>
+                    <TranslateTransform X="2" Y="2"></TranslateTransform>
+                </Grid.RenderTransform>
+            </Grid>
+            <TextBlock>Loading...</TextBlock>
+        </StackPanel>
+        
 
         <ScrollViewer x:Name="scrollViewer" ViewChanged="scrollViewer_ViewChanged" 
                       HorizontalAlignment="Stretch" VerticalAlignment="Stretch" 
