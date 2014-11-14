@@ -11,87 +11,148 @@
 #include <d3d11_1.h>
 #include "windows.ui.xaml.media.dxinterop.h"
 
-#include "GifLoader.h"
+#include "giflibpp.h"
 #include "BasicTimer.h"
 
 namespace GifRenderer
 {
-  using Windows::UI::Xaml::Media::Imaging::VirtualSurfaceImageSource;
-  using Windows::Graphics::Display::DisplayInformation;
-  using Windows::UI::Xaml::Application;
-  using Windows::UI::Xaml::SuspendingEventHandler;
-  using Windows::ApplicationModel::SuspendingEventArgs;
-  using namespace Microsoft::WRL;
-  [Windows::Foundation::Metadata::WebHostHidden]
-  public ref class GifRenderer sealed
-  {
-  private:
-    void Update();
+    using Windows::UI::Xaml::Media::Imaging::VirtualSurfaceImageSource;
+    using Windows::Graphics::Display::DisplayInformation;
+    using Windows::UI::Xaml::Application;
+    using Windows::UI::Xaml::SuspendingEventHandler;
+    using Windows::ApplicationModel::SuspendingEventArgs;
+    using namespace Microsoft::WRL;
 
-    struct VirtualSurfaceUpdatesCallbackNative : public Microsoft::WRL::RuntimeClass<Microsoft::WRL::RuntimeClassFlags<Microsoft::WRL::ClassicCom>, IVirtualSurfaceUpdatesCallbackNative>
+    enum DISPOSAL_METHODS
     {
-    private:
-      Platform::WeakReference _rendererReference;
-    public:
-      VirtualSurfaceUpdatesCallbackNative(GifRenderer^ renderer) : _rendererReference(renderer)
-      {
-      }
-
-      virtual HRESULT STDMETHODCALLTYPE UpdatesNeeded()
-      {
-        GifRenderer^ renderer = _rendererReference.Resolve<GifRenderer>();
-        if (renderer != nullptr && !renderer->_suspended)
-          renderer->Update();
-        return S_OK;
-      }
+        DM_UNDEFINED = 0,
+        DM_NONE = 1,
+        DM_BACKGROUND = 2,
+        DM_PREVIOUS = 3
     };
 
-    Microsoft::WRL::ComPtr<VirtualSurfaceUpdatesCallbackNative> _callback;
-    Microsoft::WRL::ComPtr<IVirtualSurfaceImageSourceNative> _sisNative;
-    Microsoft::WRL::ComPtr<ID2D1DeviceContext> _d2dContext;
-    Microsoft::WRL::ComPtr<ID2D1Bitmap> _renderBitmap;
-    GifLoader^ _gifLoader;
-    BasicTimer^ _timer;
-    VirtualSurfaceImageSource^ _imageSource;
-    DisplayInformation^ _displayInfo;
-    Windows::Foundation::EventRegistrationToken _suspendingCookie;
-    Windows::Foundation::EventRegistrationToken _resumingCookie;
-    int	_currentFrame;
-    int	_lastFrame;
-    bool _startedRendering;
-    bool _suspended;
-    // Direct3D device
-    Microsoft::WRL::ComPtr<ID3D11Device> _d3dDevice;
-    // Direct2D object
-    Microsoft::WRL::ComPtr<ID2D1Device> _d2dDevice;
-
-    inline void ThrowIfFailed(HRESULT hr)
+    struct GifFrame
     {
-      if (FAILED(hr))
-      {
-        throw Platform::Exception::CreateException(hr);
-      }
-    }
+        int width;
+        int height;
+        int top;
+        int left;
+        int right;
+        int bottom;
+        int transparentColor;
+        uint32_t delay;
+        DISPOSAL_METHODS disposal;
+    };
 
-  public:
-    GifRenderer(Windows::Foundation::Collections::IVector<std::uint8_t>^ initialData, Windows::Storage::Streams::IInputStream^ inputStream);
-
-    void OnSuspending(Object ^sender, SuspendingEventArgs ^e);
-
-    void OnResuming(Object ^sender, Object ^e);
-
-    property VirtualSurfaceImageSource^ ImageSource
+    struct gif_user_data
     {
-      VirtualSurfaceImageSource^ get();
-    }
-    virtual ~GifRenderer();
-    void Retry();
+        unsigned int position;
+        std::vector<uint8_t> buffer;
+        Windows::Storage::Streams::IDataReader^ reader;
+        bool finishedLoad;
+        bool finishedReader;
+        bool finishedData;
+        std::function<void(int)> loadCallback;
+        std::function<void(Platform::String^)> errorHandler;
+        int read(GifByteType * buf, unsigned int length);
+        void revert()
+        {
+            position = 0;
+        }
+        void checkpoint()
+        {
+            buffer.erase(buffer.begin(), buffer.begin() + position);
+            position = 0;
+        }
+        void readSome();
+    };
 
-  private:
+    ref class GifRenderer sealed
+    {
+    private:
+        void Update();
 
-    void GifRenderer::CreateDeviceResources();
-    void GifRenderer::BeginDraw(POINT& offset);
-    void GifRenderer::EndDraw();
-    bool GifRenderer::Update(float total, float delta);
-  };
+        struct VirtualSurfaceUpdatesCallbackNative : public Microsoft::WRL::RuntimeClass < Microsoft::WRL::RuntimeClassFlags<Microsoft::WRL::ClassicCom>, IVirtualSurfaceUpdatesCallbackNative >
+        {
+        private:
+            Platform::WeakReference _rendererReference;
+        public:
+            VirtualSurfaceUpdatesCallbackNative(GifRenderer^ renderer) : _rendererReference(renderer)
+            {
+            }
+
+            virtual HRESULT STDMETHODCALLTYPE UpdatesNeeded()
+            {
+                GifRenderer^ renderer = _rendererReference.Resolve<GifRenderer>();
+                if (renderer != nullptr && !renderer->_suspended)
+                    renderer->Update();
+                return S_OK;
+            }
+        };
+
+        Microsoft::WRL::ComPtr<VirtualSurfaceUpdatesCallbackNative> _callback;
+        Microsoft::WRL::ComPtr<IVirtualSurfaceImageSourceNative> _sisNative;
+        Microsoft::WRL::ComPtr<ID2D1DeviceContext> _d2dContext;
+        Microsoft::WRL::ComPtr<ID2D1Bitmap> _renderBitmap;
+        BasicTimer^ _timer;
+        VirtualSurfaceImageSource^ _imageSource;
+        DisplayInformation^ _displayInfo;
+        Windows::Foundation::EventRegistrationToken _suspendingCookie;
+        Windows::Foundation::EventRegistrationToken _resumingCookie;
+        int	_currentFrame;
+        int	_lastFrame;
+        bool _startedRendering;
+        bool _suspended;
+
+        std::function<void(Platform::String^)> _errorHandler;
+        std::function<void(int)> _loadCallback;
+
+        gif_user_data _loaderData;
+        bool _isLoaded;
+        std::unique_ptr<GifFileType<gif_user_data>> _gifFile;
+        std::vector<GifFrame> _frames;
+        std::unique_ptr<uint32_t[]> _renderBuffer;
+
+        // Direct3D device
+        Microsoft::WRL::ComPtr<ID3D11Device> _d3dDevice;
+        // Direct2D object
+        Microsoft::WRL::ComPtr<ID2D1Device> _d2dDevice;
+
+        inline void ThrowIfFailed(HRESULT hr)
+        {
+            if (FAILED(hr))
+            {
+                throw Platform::Exception::CreateException(hr);
+            }
+        }
+
+    internal:
+        GifRenderer(Platform::Array<std::uint8_t>^ initialData, Windows::Storage::Streams::IInputStream^ inputStream,
+            std::function<void(Platform::String^)>& errorHandler, std::function<void(int)>& frameLoadedCallback);
+
+    public:
+        property VirtualSurfaceImageSource^ ImageSource
+        {
+            VirtualSurfaceImageSource^ get();
+        }
+        virtual ~GifRenderer();
+        
+    private:
+        void OnSuspending(Object ^sender, SuspendingEventArgs ^e);
+        void OnResuming(Object ^sender, Object ^e);
+
+        void InitialLoad(Platform::Array<std::uint8_t>^ initialData, Windows::Storage::Streams::IInputStream^ inputStream);
+        bool IsLoaded() const;
+        bool LoadMore();
+        uint32_t Height() const;
+        uint32_t Width() const;
+        size_t FrameCount() const;
+        uint32_t GetFrameDelay(size_t index) const;
+        std::unique_ptr<uint32_t[]>& GetFrame(size_t currentIndex, size_t targetIndex);
+
+        void GifRenderer::CreateDeviceResources();
+        void GifRenderer::BeginDraw(POINT& offset);
+        void GifRenderer::EndDraw();
+        bool GifRenderer::Update(float total, float delta);
+    };
 }

@@ -15,9 +15,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="$(MSBuildThisFileDirectory)BasicTimer.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)GifConverter.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)giflibpp.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)GifLoader.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)GifRenderer.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)pch.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)VirtualSurfaceRenderer.h" />
@@ -26,8 +24,6 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="$(MSBuildThisFileDirectory)GifConverter.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)GifLoader.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)GifRenderer.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)pch.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
