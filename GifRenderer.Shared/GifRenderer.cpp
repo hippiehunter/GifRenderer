@@ -21,6 +21,11 @@ GR::GifRenderer(Windows::Foundation::Collections::IVector<std::uint8_t>^ initial
   CreateDeviceResources();
 }
 
+void GR::Retry()
+{
+    
+}
+
 void GR::OnSuspending(Object ^sender, SuspendingEventArgs ^e)
 {
   _suspended = true;

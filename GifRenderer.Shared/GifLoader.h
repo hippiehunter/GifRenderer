@@ -7,13 +7,6 @@
 
 namespace GifRenderer
 {
-	public interface class GetMoreData
-	{
-	public:
-		bool Get(Platform::Array<uint8_t>^* data);
-		void DisposeWorkaround();
-	};
-
 	enum DISPOSAL_METHODS
 	{
 		DM_UNDEFINED = 0,

@@ -56,7 +56,8 @@
                     <TranslateTransform X="2" Y="2"></TranslateTransform>
                 </Grid.RenderTransform>
             </Grid>
-            <TextBlock FontSize="20">Loading...</TextBlock>
+            <Button Content="Retry" Click="Retry_Clicked"/>
+            <TextBlock x:Name="loadText"  FontSize="20">Loading...</TextBlock>
         </StackPanel>
         
 

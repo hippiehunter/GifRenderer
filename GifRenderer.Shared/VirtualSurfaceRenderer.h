@@ -117,6 +117,10 @@ namespace GifRenderer
     {
 		Windows::UI::Xaml::Media::ImageSource^ get();
     }
+
+    property bool Failed;
+    property Platform::String^ FailureText;
 	virtual ~VirtualSurfaceRenderer();
+    void Retry();
   };
 }

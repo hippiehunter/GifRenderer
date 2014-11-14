@@ -118,3 +118,12 @@ void ::GifRenderer::ZoomableImageControl::scrollViewer_ViewChanged(Platform::Obj
 	if (_virtualSurfaceRenderer != nullptr)
 		_virtualSurfaceRenderer->ViewChanged(sender, e);
 }
+
+void ::GifRenderer::ZoomableImageControl::Retry_Clicked(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e)
+{
+    if (_virtualSurfaceRenderer != nullptr)
+        _virtualSurfaceRenderer->Retry();
+
+    else if (_gifRenderer != nullptr)
+        _gifRenderer->Retry();
+}

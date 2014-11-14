@@ -85,6 +85,7 @@ namespace GifRenderer
       VirtualSurfaceImageSource^ get();
     }
     virtual ~GifRenderer();
+    void Retry();
 
   private:
 
