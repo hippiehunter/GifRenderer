@@ -57,7 +57,7 @@
                 </Grid.RenderTransform>
             </Grid>
             <Button x:Name="retryButton" Opacity="0" Content="Retry" Click="Retry_Clicked"/>
-            <TextBlock x:Name="loadText"  FontSize="20">Loading...</TextBlock>
+            <TextBlock x:Name="loadText" TextWrapping="Wrap" FontSize="20">Loading...</TextBlock>
         </StackPanel>
         
 

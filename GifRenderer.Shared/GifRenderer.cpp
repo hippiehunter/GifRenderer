@@ -33,7 +33,8 @@ void gif_user_data::readSome()
     {
         try
         {
-            loadCallback(loadOp.get());
+            if (loadCallback)
+                loadCallback(loadOp.get());
             if (loadOp.get() >= 256 * 1024)
                 finishedReader = true;
             //else
@@ -373,13 +374,17 @@ VirtualSurfaceImageSource^ GR::ImageSource::get()
 
 GR::~GifRenderer()
 {
+    if (_loaderData.reader != nullptr)
+    {
+        delete _loaderData.reader;
+    }
+    _loaderData = {};
     _callback = nullptr;
     _timer = nullptr;
     _suspended = true;
     _sisNative->RegisterForUpdatesNeeded(nullptr);
     _sisNative = nullptr;
     _callback = nullptr;
-    _loaderData = {};
     _renderBitmap = nullptr;
     _d2dContext = nullptr;
     Application::Current->Suspending -= _suspendingCookie;

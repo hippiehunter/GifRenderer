@@ -106,12 +106,17 @@ void ::GifRenderer::ZoomableImageControl::AfterInitialLoad(Platform::Array<std::
 
 void ::GifRenderer::ZoomableImageControl::UserControl_DataContextChanged(Windows::UI::Xaml::FrameworkElement^ sender, Windows::UI::Xaml::DataContextChangedEventArgs^ args)
 {
-    _initialSizeChanged = false;
-    _virtualSurfaceRenderer = nullptr;
-    _gifRenderer = nullptr;
+    auto targetUrl = dynamic_cast<String^>(args->NewValue);
+    if (_targetUrl != targetUrl)
+    {
+        _targetUrl = targetUrl;
+        _initialSizeChanged = false;
+        _virtualSurfaceRenderer = nullptr;
+        _gifRenderer = nullptr;
 
-    _targetUrl = dynamic_cast<String^>(args->NewValue);
-    Load();
+        if (_targetUrl != nullptr)
+            Load();
+    }
 }
 
 void ::GifRenderer::ZoomableImageControl::image_SizeChanged(Platform::Object^ sender, Windows::UI::Xaml::SizeChangedEventArgs^ e)
