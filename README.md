@@ -15,7 +15,7 @@ Usage will look something like this:
 ```xml
     <gif:ZoomableImageControl DataContext="{Binding Url}" />
 ```
-# Do not use the nuget package it is out of date and I've not figured out how to correctly package this
+# Do not use the NuGet package. It is out of date and I've not figured out how to correctly package this
 
 Limitations
 ===========
