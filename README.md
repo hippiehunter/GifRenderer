@@ -7,15 +7,15 @@ Universal Windows(XAML) Image viewer for very high resolution images and GIFs
 Usage
 ===========
 
-assuming your xmlns looks like this
-
+Assuming your xmlns looks like this:
+```xml
     xmlns:gif="using:GifRenderer"
-
-usage will look something like this
-
+```
+Usage will look something like this:
+```xml
     <gif:ZoomableImageControl DataContext="{Binding Url}" />
-
-#dont use the nuget package it is out of date and I've not figured out how to correctly package this
+```
+# Do not use the nuget package it is out of date and I've not figured out how to correctly package this
 
 Limitations
 ===========
