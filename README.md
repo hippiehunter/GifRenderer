@@ -1,7 +1,7 @@
 GifRenderer
 ===========
 
-Gif Renderer for Universal Windows Apps
+Universal Windows(XAML) Image viewer for very high resolution images and GIFs
 
 
 Usage
