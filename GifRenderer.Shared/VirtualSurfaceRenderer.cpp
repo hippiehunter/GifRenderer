@@ -14,7 +14,7 @@ VirtualSurfaceRenderer::VirtualSurfaceRenderer(Platform::Array<std::uint8_t>^ in
     _loadCallback = loadCallback;
     _updateCallback = fn;
 #if WINDOWS_PHONE_APP
-    _maxRenderDimension = Windows::System::MemoryManager::AppMemoryUsageLimit > 300 * 1024 * 1024 ? 1024.0f : 512.0f;
+    _maxRenderDimension = Windows::System::MemoryManager::AppMemoryUsageLimit > 300 * 1024 * 1024 ? 1024.0f : 400.0f;
 #else
     _maxRenderDimension = 2048;
 #endif

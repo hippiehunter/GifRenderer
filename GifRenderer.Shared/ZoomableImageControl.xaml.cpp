@@ -44,7 +44,11 @@ bool IsGif(Platform::Array<std::uint8_t>^ data)
 void ::GifRenderer::ZoomableImageControl::ZoomToContent()
 {
     // If the image is larger than the screen, zoom it out
-    auto zoomFactor = (float)std::min(scrollViewer->ViewportWidth / image->ActualWidth, scrollViewer->ViewportHeight / image->ActualHeight);
+
+    auto imageWidth = image->Width != image->Width ? image->ActualWidth : image->Width;
+    auto imageHeight = image->Height != image->Height ? image->ActualHeight : image->Height;
+
+    auto zoomFactor = (float) std::min(scrollViewer->ViewportWidth / imageWidth, scrollViewer->ViewportHeight / imageHeight);
     scrollViewer->MinZoomFactor = std::max(zoomFactor, 0.1f);
     scrollViewer->MaxZoomFactor = 20;
     scrollViewer->ChangeView(nullptr, nullptr, zoomFactor, true);
@@ -84,7 +88,6 @@ void ::GifRenderer::ZoomableImageControl::AfterInitialLoad(Platform::Array<std::
         {
             _gifRenderer = ref new ::GifRenderer::GifRenderer(initialData, inputStream, errorHandler, loadCallback);
             image->Source = _gifRenderer->ImageSource;
-            FadeIn->Begin();
         }
         else
         {
@@ -95,7 +98,6 @@ void ::GifRenderer::ZoomableImageControl::AfterInitialLoad(Platform::Array<std::
                     image->Height = height;
                     image->Width = width;
                     image->Source = _virtualSurfaceRenderer->ImageSource;
-                    FadeIn->Begin();
                 }
             });
             
@@ -125,6 +127,7 @@ void ::GifRenderer::ZoomableImageControl::image_SizeChanged(Platform::Object^ se
     {
         _initialSizeChanged = true;
         ZoomToContent();
+        FadeIn->Begin();
     }
 }
 

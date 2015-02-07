@@ -59,14 +59,12 @@
             <Button x:Name="retryButton" Opacity="0" Content="Retry" Click="Retry_Clicked"/>
             <TextBlock x:Name="loadText" TextWrapping="Wrap" FontSize="20">Loading...</TextBlock>
         </StackPanel>
-        
-
         <ScrollViewer x:Name="scrollViewer" ViewChanged="scrollViewer_ViewChanged" 
                       HorizontalAlignment="Stretch" VerticalAlignment="Stretch" 
                       VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" 
                       IsHorizontalRailEnabled="True" ZoomMode="Enabled">
-            <Image x:Name="image" HorizontalAlignment="Center" VerticalAlignment="Center" SizeChanged="image_SizeChanged"
-                Stretch="Fill" Opacity="0"/>
+                <Image x:Name="image" HorizontalAlignment="Center" VerticalAlignment="Center"
+                Stretch="Fill" Opacity="0" SizeChanged="image_SizeChanged"/>
         </ScrollViewer>
     </Grid>
 </UserControl>
