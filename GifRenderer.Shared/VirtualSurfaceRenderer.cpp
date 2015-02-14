@@ -3,12 +3,59 @@
 #include <robuffer.h>
 #include <collection.h>
 #include <windows.h>
+#include <string>
+
 using namespace concurrency;
 using namespace GifRenderer;
-using namespace Nokia::Graphics::Imaging;
-VirtualSurfaceRenderer::VirtualSurfaceRenderer(Platform::Array<std::uint8_t>^ initialData,
+using namespace Lumia::Imaging;
+using namespace Windows::Security::Cryptography::Core;
+using namespace Windows::Security::Cryptography;
+
+
+bool starts_with(std::wstring const &fullString, std::wstring const &start)
+{
+    if (fullString.length() >= start.length())
+    {
+        return (0 == fullString.compare(0, start.length(), start));
+    }
+    else
+    {
+        return false;
+    }
+}
+
+concurrency::task<Windows::Storage::Streams::IRandomAccessStream^> VirtualSurfaceRenderer::GetFileSource(Platform::String^ onDiskName, bool isUri)
+{
+    return create_task(isUri ? 
+        Windows::Storage::StorageFile::GetFileFromApplicationUriAsync(ref new Windows::Foundation::Uri(onDiskName)) :
+        Windows::Storage::StorageFile::GetFileFromPathAsync(onDiskName))
+        .then([=](task<Windows::Storage::StorageFile^> fileTask)
+    {
+        try
+        {
+            return create_task(fileTask.get()->OpenReadAsync())
+                .then([](task<Windows::Storage::Streams::IRandomAccessStreamWithContentType^> accessStreamTask)
+            {
+                try
+                {
+                    return task_from_result(dynamic_cast<Windows::Storage::Streams::IRandomAccessStream^>(accessStreamTask.get()));
+                }
+                catch (Platform::Exception^ ex)
+                {
+                    return task_from_exception<Windows::Storage::Streams::IRandomAccessStream^>(ex);
+                }
+            });
+        }
+        catch (Platform::Exception^ ex)
+        {
+            return task_from_exception<Windows::Storage::Streams::IRandomAccessStream^>(ex);
+        }
+    });
+}
+
+VirtualSurfaceRenderer::VirtualSurfaceRenderer(Platform::Array<std::uint8_t>^ initialData, Platform::String^ url,
     Windows::Storage::Streams::IInputStream^ inputStream, std::function<void(int, int)>& fn, std::function<void(int)> loadCallback,
-    std::function<void(Platform::String^)>& errorHandler)
+    std::function<void(Platform::String^)>& errorHandler, concurrency::cancellation_token cancel)
 {
     _errorHandler = errorHandler;
     _loadCallback = loadCallback;
@@ -26,8 +73,31 @@ VirtualSurfaceRenderer::VirtualSurfaceRenderer(Platform::Array<std::uint8_t>^ in
     _suspendingCookie = (Application::Current->Suspending += ref new SuspendingEventHandler(this, &VirtualSurfaceRenderer::OnSuspending));
     _resumingCookie = (Application::Current->Resuming += ref new Windows::Foundation::EventHandler<Object^>(this, &VirtualSurfaceRenderer::OnResuming));
     _callback = Make<VirtualSurfaceUpdatesCallbackNative>(this);
-    GetImageSource(initialData, inputStream)
-        .then([=](concurrency::task<Windows::Storage::Streams::IRandomAccessStream^> imageSourceTask)
+
+    
+    //decide if the file is already local
+    //it might be a bad assumption but we're going to assume if the url doesnt start with http then its not a network resource
+    auto onDiskName = Windows::Storage::ApplicationData::Current->TemporaryFolder->Path + L"\\deleteme" + ComputeMD5(url) + L".jpg";
+    _stat64i32 stat;
+    bool existsOnDisk = false;
+    bool isUri = false;
+    if (!starts_with(url->Data(), L"http") && _wstat(url->Data(), &stat) == 0)
+    {
+        if (starts_with(url->Data(), L"ms-"))
+            isUri = true;
+        
+        onDiskName = url;
+        existsOnDisk = true;
+    }
+    else if (_wstat(onDiskName->Data(), &stat) == 0)
+    {
+        existsOnDisk = true;
+    }
+
+
+    concurrency::task<Windows::Storage::Streams::IRandomAccessStream^> broadImageSourceTask = existsOnDisk ? GetFileSource(onDiskName, isUri) : GetImageSource(initialData, inputStream, url, cancel);
+    
+    broadImageSourceTask.then([=](concurrency::task<Windows::Storage::Streams::IRandomAccessStream^> imageSourceTask)
     {
         try
         {
@@ -46,62 +116,70 @@ VirtualSurfaceRenderer::VirtualSurfaceRenderer(Platform::Array<std::uint8_t>^ in
                         if ((_imageSize.Width * _imageSize.Height) > (_maxRenderDimension * _maxRenderDimension * 2))
                         {
                             // Find aspect ratio for resize
-                            auto nPercentW = (_maxRenderDimension / (float)_imageSize.Width);
-                            auto nPercentH = (_maxRenderDimension / (float)_imageSize.Height);
+                            auto nPercentW = (_maxRenderDimension / (float) _imageSize.Width);
+                            auto nPercentH = (_maxRenderDimension / (float) _imageSize.Height);
                             _overallImageScale = nPercentH < nPercentW ? nPercentH : nPercentW;
 
-                            auto reframeWidth = (long)(_imageSize.Width * _overallImageScale);
-                            auto reframeHeight = (long)(_imageSize.Height * _overallImageScale);
+                            auto reframeWidth = (long) (_imageSize.Width * _overallImageScale);
+                            auto reframeHeight = (long) (_imageSize.Height * _overallImageScale);
 
-                            _imageSource = ref new VirtualSurfaceImageSource(_currentWidth = (int)reframeWidth, _currentHeight = (int)reframeHeight);
+                            _imageSource = ref new VirtualSurfaceImageSource(_currentWidth = (int) reframeWidth, _currentHeight = (int) reframeHeight);
                             reinterpret_cast<IUnknown*>(_imageSource)->QueryInterface(IID_PPV_ARGS(&_sisNative));
 
                             ThrowIfFailed(_sisNative->RegisterForUpdatesNeeded(_callback.Get()));
                             CreateDeviceResources();
 
 
-                            _updateCallback((int)_imageSize.Width, (int)_imageSize.Height);
+                            _updateCallback((int) _imageSize.Width, (int) _imageSize.Height);
                             _updateCallback = nullptr;
                             _filterState = FilterState::APPLY;
-                            create_task(imageSource->GetBitmapAsync(ref new Bitmap(Windows::Foundation::Size((float)reframeWidth, (float)reframeHeight), ColorMode::Bgra8888), OutputOption::PreserveAspectRatio))
-                                .then([=](Bitmap^ bitmap)
+                            create_task(imageSource->GetBitmapAsync(ref new Bitmap(Windows::Foundation::Size((float) reframeWidth, (float) reframeHeight), ColorMode::Bgra8888), OutputOption::PreserveAspectRatio))
+                                .then([=](task<Bitmap^> bitmapTask)
                             {
-                                if (!_suspended)
+                                try
                                 {
-                                    D2D1_BITMAP_PROPERTIES properties;
-                                    properties.dpiX = _displayInfo->RawDpiX;
-                                    properties.dpiY = _displayInfo->RawDpiY;
-                                    auto buffer = bitmap->Buffers->Data[0]->Buffer;
-                                    // Obtain IBufferByteAccess
-                                    ComPtr<Windows::Storage::Streams::IBufferByteAccess> pBufferByteAccess;
-                                    ComPtr<IUnknown> pBuffer((IUnknown*)buffer);
-                                    pBuffer.As(&pBufferByteAccess);
-                                    byte* bufferData;
-                                    pBufferByteAccess->Buffer(&bufferData);
+                                    auto bitmap = bitmapTask.get();
+                                    if (!_suspended)
+                                    {
+                                        D2D1_BITMAP_PROPERTIES properties;
+                                        properties.dpiX = _displayInfo->RawDpiX;
+                                        properties.dpiY = _displayInfo->RawDpiY;
+                                        auto buffer = bitmap->Buffers->Data[0]->Buffer;
+                                        // Obtain IBufferByteAccess
+                                        ComPtr<Windows::Storage::Streams::IBufferByteAccess> pBufferByteAccess;
+                                        ComPtr<IUnknown> pBuffer((IUnknown*) buffer);
+                                        pBuffer.As(&pBufferByteAccess);
+                                        byte* bufferData;
+                                        pBufferByteAccess->Buffer(&bufferData);
 
-                                    D2D1_SIZE_U size = { (UINT)bitmap->Dimensions.Width, (UINT)bitmap->Dimensions.Height };
-                                    properties.pixelFormat = D2D1_PIXEL_FORMAT{ DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_IGNORE };
+                                        D2D1_SIZE_U size = { (UINT) bitmap->Dimensions.Width, (UINT) bitmap->Dimensions.Height };
+                                        properties.pixelFormat = D2D1_PIXEL_FORMAT{ DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_IGNORE };
 
-                                    ThrowIfFailed(_d2dContext->CreateBitmap(size, bufferData, bitmap->Buffers->Data[0]->Pitch, properties, _originalBitmap.ReleaseAndGetAddressOf()));
+                                        ThrowIfFailed(_d2dContext->CreateBitmap(size, bufferData, bitmap->Buffers->Data[0]->Pitch, properties, _originalBitmap.ReleaseAndGetAddressOf()));
 
-                                    RECT invalidateRect{ 0, 0, _currentWidth, _currentHeight };
-                                    _sisNative->Invalidate(invalidateRect);
+                                        RECT invalidateRect{ 0, 0, _currentWidth, _currentHeight };
+                                        _sisNative->Invalidate(invalidateRect);
 
-                                    _filterState = FilterState::WAIT;
+                                        _filterState = FilterState::WAIT;
+                                    }
+                                }
+                                catch (Platform::Exception^ ex)
+                                {
+                                    _errorHandler(ex->Message);
                                 }
                             });
                         }
                         else
                         {
-                            auto wbmp = ref new Windows::UI::Xaml::Media::Imaging::WriteableBitmap((int)_imageSize.Width, (int)_imageSize.Height);
-                            Nokia::Graphics::Imaging::WriteableBitmapRenderer^ wbr = ref new WriteableBitmapRenderer(imageSource, wbmp);
+                            auto wbmp = ref new Windows::UI::Xaml::Media::Imaging::WriteableBitmap((int) _imageSize.Width, (int) _imageSize.Height);
+                            WriteableBitmapRenderer^ wbr = ref new WriteableBitmapRenderer(imageSource, wbmp);
                             create_task(wbr->RenderAsync())
                                 .then([=](task<Windows::UI::Xaml::Media::Imaging::WriteableBitmap^> bitmapTask)
                             {
                                 try
                                 {
                                     _imageSource = bitmapTask.get();
-                                    _updateCallback((int)_imageSize.Width, (int)_imageSize.Height);
+                                    _updateCallback((int) _imageSize.Width, (int) _imageSize.Height);
                                     _updateCallback = nullptr;
                                     _imageSource = nullptr;
                                     delete imageSource;
@@ -151,7 +229,7 @@ void VirtualSurfaceRenderer::OnResuming(Object ^sender, Object ^e)
     _filterState = FilterState::WAIT;
     _suspended = false;
 
-    RECT invalidateRect{ 0, 0, 1, 1 };
+    RECT invalidateRect{ 0, 0, _currentHeight, _currentWidth };
     if (_sisNative != nullptr)
         _sisNative->Invalidate(invalidateRect);
 }
@@ -387,7 +465,7 @@ void VirtualSurfaceRenderer::Update()
                     auto filter = ref new FilterEffect(ref new RandomAccessStreamImageSource(_fileStream));
                     auto filters = ref new Platform::Collections::Vector<IFilter^>();
                     auto frameScale = _imageSize.Width / static_cast<float>(_currentWidth);
-                    filters->Append(ref new ReframingFilter(Windows::Foundation::Rect(
+                    filters->Append(ref new Lumia::Imaging::Transforms::ReframingFilter(Windows::Foundation::Rect(
                         static_cast<float>(requestedBounds.left) * frameScale,
                         static_cast<float>(requestedBounds.top) * frameScale,
                         static_cast<float>(width)* frameScale,
@@ -499,7 +577,7 @@ bool VirtualSurfaceRenderer::DrawRequested(POINT offset, RECT requested, RECT ov
     return true;
 }
 
-concurrency::task<void> VirtualSurfaceRenderer::LoadSome(Windows::Storage::Streams::IInputStream^ inputStream, Windows::Storage::Streams::DataWriter^ target)
+concurrency::task<void> VirtualSurfaceRenderer::LoadSome(Windows::Storage::Streams::IInputStream^ inputStream, Windows::Storage::Streams::IRandomAccessStream^ target, cancellation_token cancel)
 {
     if (_suspended)
     {
@@ -507,7 +585,7 @@ concurrency::task<void> VirtualSurfaceRenderer::LoadSome(Windows::Storage::Strea
     }
     else
     {
-        return create_task(inputStream->ReadAsync(ref new Windows::Storage::Streams::Buffer(32 * 1024), 32 * 1024, Windows::Storage::Streams::InputStreamOptions::None))
+        return create_task(inputStream->ReadAsync(ref new Windows::Storage::Streams::Buffer(32 * 1024), 32 * 1024, Windows::Storage::Streams::InputStreamOptions::None), cancel)
             .then([=](task<Windows::Storage::Streams::IBuffer^> buffer)
         {
             try
@@ -516,13 +594,20 @@ concurrency::task<void> VirtualSurfaceRenderer::LoadSome(Windows::Storage::Strea
                 auto bufferSize = bufferResult->Length;
                 if (_loadCallback != nullptr)
                     _loadCallback(bufferSize);
-                target->WriteBuffer(bufferResult, 0, bufferSize);
-                if (bufferResult->Length >= 32 * 1024)
-                    return LoadSome(inputStream, target);
+                return create_task(target->WriteAsync(bufferResult), cancel)
+                    .then([=](task<unsigned int> tsk)
+                {
+                    if (bufferResult->Length >= 32 * 1024)
+                        return LoadSome(inputStream, target, cancel);
+                    else
+                        return task_from_result();
+                });
+                
             }
             catch (Platform::Exception^ ex)
             {
-
+                _loadCallback = nullptr;
+                return task_from_exception<void>(ex);
             }
             catch (...)
             {
@@ -534,30 +619,75 @@ concurrency::task<void> VirtualSurfaceRenderer::LoadSome(Windows::Storage::Strea
     }
 }
 
+
+Platform::String^ VirtualSurfaceRenderer::ComputeMD5(Platform::String^ str)
+{
+    auto alg = HashAlgorithmProvider::OpenAlgorithm("MD5");
+    auto buff = CryptographicBuffer::ConvertStringToBinary(str, BinaryStringEncoding::Utf8);
+    auto hashed = alg->HashData(buff);
+    auto res = CryptographicBuffer::EncodeToHexString(hashed);
+    return res;
+}
+
 concurrency::task<Windows::Storage::Streams::IRandomAccessStream^> VirtualSurfaceRenderer::GetImageSource(
     Platform::Array<std::uint8_t>^ initialData,
-    Windows::Storage::Streams::IInputStream^ inputStream)
+    Windows::Storage::Streams::IInputStream^ inputStream, Platform::String^ url, cancellation_token cancel)
 {
-    return create_task(Windows::Storage::ApplicationData::Current->TemporaryFolder->CreateFileAsync("deleteme", Windows::Storage::CreationCollisionOption::GenerateUniqueName))
-        .then([](Windows::Storage::StorageFile^ storeFile) { return create_task(storeFile->OpenAsync(Windows::Storage::FileAccessMode::ReadWrite)); })
-        .then([=](Windows::Storage::Streams::IRandomAccessStream^ file)
-    {
-        Windows::Storage::Streams::DataWriter^ writer = ref new Windows::Storage::Streams::DataWriter(file);
-        writer->WriteBytes(initialData);
-
-        return LoadSome(inputStream, writer).then([=]()
+    auto targetFileName = L"deleteme" + ComputeMD5(url) + L".jpg";
+    return create_task(Windows::Storage::ApplicationData::Current->TemporaryFolder->CreateFileAsync(targetFileName, Windows::Storage::CreationCollisionOption::FailIfExists))
+        .then([=](Windows::Storage::StorageFile^ storeFile) 
+    { 
+        return create_task(storeFile->OpenAsync(Windows::Storage::FileAccessMode::ReadWrite), cancel)
+            .then([=](Windows::Storage::Streams::IRandomAccessStream^ file)
         {
-            return create_task(writer->StoreAsync())
-                .then([=](uint32_t)
+            auto failCleanup = [=]()
             {
-                return create_task(writer->FlushAsync())
-                    .then([=](bool)
+                try
                 {
-                    delete inputStream;
-                    auto targetStream = dynamic_cast<Windows::Storage::Streams::IRandomAccessStream^>(writer->DetachStream());
-                    targetStream->Seek(0);
-                    return targetStream;
-                });
+                    create_task(storeFile->DeleteAsync())
+                        .then([](task<void> tsk) {try { tsk.get(); } catch (...) {}});
+                }
+                catch (...) {}
+            };
+            return create_task(file->WriteAsync(Windows::Security::Cryptography::CryptographicBuffer::CreateFromByteArray(initialData)))
+                .then([=](task<unsigned int> tsk)
+            {
+                try
+                {
+                    return LoadSome(inputStream, file, cancel)
+                        .then([=](task<void> loadSomeTask)
+                    {
+                        try
+                        {
+                            return create_task(file->FlushAsync())
+                                .then([=](task<bool> tsk)
+                            {
+                                try
+                                {
+                                    delete file;
+                                    delete storeFile;
+                                    return GetFileSource(Windows::Storage::ApplicationData::Current->TemporaryFolder->Path + L"\\" + targetFileName, false);
+                                }
+                                catch (Platform::Exception^ ex)
+                                {
+                                    failCleanup();
+                                    return task_from_exception<Windows::Storage::Streams::IRandomAccessStream ^>(ex);
+                                }
+                            });
+                            
+                        }
+                        catch (Platform::Exception^ ex)
+                        {
+                            failCleanup();
+                            return task_from_exception<Windows::Storage::Streams::IRandomAccessStream ^>(ex);
+                        }
+                    });
+                }
+                catch (Platform::Exception^ ex)
+                {
+                    failCleanup();
+                    return task_from_exception<Windows::Storage::Streams::IRandomAccessStream ^>(ex);
+                }
             });
         });
     });

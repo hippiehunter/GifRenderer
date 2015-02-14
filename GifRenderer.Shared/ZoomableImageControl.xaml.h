@@ -17,6 +17,7 @@ namespace GifRenderer
     public:
         ZoomableImageControl();
     private:
+        concurrency::cancellation_token_source cancelSource;
         ::GifRenderer::GifRenderer^ _gifRenderer;
         ::GifRenderer::VirtualSurfaceRenderer^ _virtualSurfaceRenderer;
         bool _initialSizeChanged;

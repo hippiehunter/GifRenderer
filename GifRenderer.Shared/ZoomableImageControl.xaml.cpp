@@ -101,7 +101,7 @@ void ::GifRenderer::ZoomableImageControl::AfterInitialLoad(Platform::Array<std::
                 }
             });
             
-            _virtualSurfaceRenderer = ref new VirtualSurfaceRenderer(initialData, inputStream, fn, loadCallback, errorHandler);
+            _virtualSurfaceRenderer = ref new VirtualSurfaceRenderer(initialData, _targetUrl, inputStream, fn, loadCallback, errorHandler, cancelSource.get_token());
         }
     }
 }
@@ -111,6 +111,11 @@ void ::GifRenderer::ZoomableImageControl::UserControl_DataContextChanged(Windows
     auto targetUrl = dynamic_cast<String^>(args->NewValue);
     if (_targetUrl != targetUrl)
     {
+        if (_targetUrl != nullptr)
+        {
+            cancelSource.cancel();
+            cancelSource = cancellation_token_source();
+        }
         _targetUrl = targetUrl;
         _initialSizeChanged = false;
         _virtualSurfaceRenderer = nullptr;
@@ -133,6 +138,8 @@ void ::GifRenderer::ZoomableImageControl::image_SizeChanged(Platform::Object^ se
 
 void ::GifRenderer::ZoomableImageControl::UserControl_Unloaded(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e)
 {
+    cancelSource.cancel();
+    cancelSource = cancellation_token_source();
     _virtualSurfaceRenderer = nullptr;
     _gifRenderer = nullptr;
 }

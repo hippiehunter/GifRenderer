@@ -86,18 +86,20 @@ namespace GifRenderer
     // Direct2D object
     Microsoft::WRL::ComPtr<ID2D1Device> _d2dDevice;
 
-    concurrency::task<Windows::Storage::Streams::IRandomAccessStream^> VirtualSurfaceRenderer::GetImageSource(
-      Platform::Array<std::uint8_t>^ initialData,
-      Windows::Storage::Streams::IInputStream^ inputStream);
+    concurrency::task<Windows::Storage::Streams::IRandomAccessStream^> GetFileSource(Platform::String^ onDiskName, bool isUri);
 
-    concurrency::task<void> LoadSome(Windows::Storage::Streams::IInputStream^ inputStream, Windows::Storage::Streams::DataWriter^ target);
+    concurrency::task<Windows::Storage::Streams::IRandomAccessStream^> VirtualSurfaceRenderer::GetImageSource(
+      Platform::Array<std::uint8_t>^ initialData, 
+      Windows::Storage::Streams::IInputStream^ inputStream, Platform::String^ url, concurrency::cancellation_token cancel);
+
+    concurrency::task<void> LoadSome(Windows::Storage::Streams::IInputStream^ inputStream, Windows::Storage::Streams::IRandomAccessStream^ target, concurrency::cancellation_token cancel);
     void OnSuspending(Object ^sender, SuspendingEventArgs ^e);
     void OnResuming(Object ^sender, Object ^e);
     void CreateDeviceResources();
     void BeginDraw(POINT& offset, RECT& updateNativeRect);
     bool DrawRequested(POINT offset, RECT requestedRegion, RECT overallRequested);
     void EndDraw();
-
+    Platform::String^ VirtualSurfaceRenderer::ComputeMD5(Platform::String^ str);
     inline void ThrowIfFailed(HRESULT hr)
     {
       if (FAILED(hr))
@@ -107,9 +109,9 @@ namespace GifRenderer
     }
 
   internal:
-      VirtualSurfaceRenderer(Platform::Array<std::uint8_t>^ initialData,
+      VirtualSurfaceRenderer(Platform::Array<std::uint8_t>^ initialData, Platform::String^ url,
           Windows::Storage::Streams::IInputStream^ inputStream, std::function<void(int, int)>& fn, std::function<void(int)> loadCallback,
-          std::function<void(Platform::String^)>& errorHandler);
+          std::function<void(Platform::String^)>& errorHandler, concurrency::cancellation_token);
     void ViewChanged(Platform::Object^ sender, Windows::UI::Xaml::Controls::ScrollViewerViewChangedEventArgs^ e);
 
   public:
