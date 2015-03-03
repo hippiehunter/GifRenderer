@@ -156,7 +156,9 @@ VirtualSurfaceRenderer::VirtualSurfaceRenderer(Platform::Array<std::uint8_t>^ in
                                         properties.pixelFormat = D2D1_PIXEL_FORMAT{ DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_IGNORE };
 
                                         ThrowIfFailed(_d2dContext->CreateBitmap(size, bufferData, bitmap->Buffers->Data[0]->Pitch, properties, _originalBitmap.ReleaseAndGetAddressOf()));
-
+                                        pBufferByteAccess.Reset();
+                                        pBuffer.Reset();
+                                        delete bitmap;
                                         RECT invalidateRect{ 0, 0, _currentWidth, _currentHeight };
                                         _sisNative->Invalidate(invalidateRect);
 

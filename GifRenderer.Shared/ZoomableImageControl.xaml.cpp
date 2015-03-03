@@ -161,19 +161,19 @@ void ::GifRenderer::ZoomableImageControl::Retry_Clicked(Platform::Object^ sender
 void ::GifRenderer::ZoomableImageControl::Load()
 {
     auto client = ref new Windows::Web::Http::HttpClient();
-    create_task(client->GetAsync(ref new Uri(_targetUrl), HttpCompletionOption::ResponseHeadersRead))
+    create_task(client->GetAsync(ref new Uri(_targetUrl), HttpCompletionOption::ResponseHeadersRead), cancelSource.get_token())
         .then([=](task<HttpResponseMessage^> responseTask)
     {
         try
         {
             auto contentLengthBox = responseTask.get()->Content->Headers->ContentLength;
             _expectedByteCount = contentLengthBox != nullptr ? contentLengthBox->Value : 0;
-            create_task(responseTask.get()->Content->ReadAsInputStreamAsync())
+            create_task(responseTask.get()->Content->ReadAsInputStreamAsync(), cancelSource.get_token())
                 .then([=](task<IInputStream^> responseStreamTask)
             {
                 try
                 {
-                    create_task(responseStreamTask.get()->ReadAsync(ref new Buffer(4096), 4096, InputStreamOptions::ReadAhead))
+                    create_task(responseStreamTask.get()->ReadAsync(ref new Buffer(4096), 4096, InputStreamOptions::ReadAhead), cancelSource.get_token())
                         .then([=](task<IBuffer^> bufferTask)
                     {
                         try
