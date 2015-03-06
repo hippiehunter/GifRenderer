@@ -7,6 +7,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)giflibpp.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)GifRenderer.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ZoomableImageControl.xaml.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)task_helper.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)pch.cpp">

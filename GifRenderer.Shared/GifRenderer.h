@@ -52,9 +52,29 @@ namespace GifRenderer
         bool finishedLoad;
         bool finishedReader;
         bool finishedData;
+		concurrency::cancellation_token cancelToken;
         std::function<void(int)> loadCallback;
         std::function<void(Platform::String^)> errorHandler;
         int read(GifByteType * buf, unsigned int length);
+		gif_user_data(concurrency::cancellation_token pcancelToken) : cancelToken(pcancelToken)
+		{
+			finishedLoad = false;
+			finishedReader = false;
+			finishedData = false;
+		}
+
+		void init(unsigned int pposition, std::vector<uint8_t> pbuffer, Windows::Storage::Streams::IDataReader^ preader, std::function<void(int)> ploadCallback, std::function<void(Platform::String^)> perrorHandler)
+		{
+			position = pposition;
+			buffer = pbuffer;
+			reader = preader;
+			loadCallback = ploadCallback;
+			errorHandler = perrorHandler;
+			finishedLoad = false;
+			finishedReader = false;
+			finishedData = false;
+		}
+
         void revert()
         {
             position = 0;
@@ -103,6 +123,7 @@ namespace GifRenderer
         int	_lastFrame;
         bool _startedRendering;
         bool _suspended;
+		concurrency::cancellation_token _cancelToken;
 
         std::function<void(Platform::String^)> _errorHandler;
         std::function<void(int)> _loadCallback;
@@ -128,7 +149,7 @@ namespace GifRenderer
 
     internal:
         GifRenderer(Platform::Array<std::uint8_t>^ initialData, Windows::Storage::Streams::IInputStream^ inputStream,
-            std::function<void(Platform::String^)>& errorHandler, std::function<void(int)>& frameLoadedCallback);
+            std::function<void(Platform::String^)>& errorHandler, std::function<void(int)>& frameLoadedCallback, concurrency::cancellation_token cancelToken);
 
     public:
         property VirtualSurfaceImageSource^ ImageSource

@@ -1,13 +1,18 @@
 #include "pch.h"
 #include "GifRenderer.h"
+#include "task_helper.h"
 
 using namespace GifRenderer;
+using namespace concurrency;
+using namespace task_helper;
+using Windows::Storage::Streams::IInputStream;
+using namespace Platform;
 typedef ::GifRenderer::GifRenderer GR;
 
 
 
-GR::GifRenderer(Platform::Array<std::uint8_t>^ initialData, Windows::Storage::Streams::IInputStream^ inputStream,
-    std::function<void(Platform::String^)>& errorHandler, std::function<void(int)>& loadCallback)
+GR::GifRenderer(Array<std::uint8_t>^ initialData, IInputStream^ inputStream,
+    std::function<void(String^)>& errorHandler, std::function<void(int)>& loadCallback, cancellation_token cancelToken) : _cancelToken(cancelToken), _loaderData(cancelToken)
 {
     _errorHandler = errorHandler;
     _loadCallback = loadCallback;
@@ -27,23 +32,25 @@ GR::GifRenderer(Platform::Array<std::uint8_t>^ initialData, Windows::Storage::St
 
 void gif_user_data::readSome()
 {
+	auto errorWrapper = [=](Platform::Exception^ ex)
+	{
+		if (dynamic_cast<Platform::OperationCanceledException^>(ex) != nullptr)
+			errorHandler("Canceled");
+		else
+			errorHandler(ex->Message);
+
+		return task_from_result();
+	};
+
     finishedReader = false;
-    concurrency::create_task(reader->LoadAsync(256 * 1024))
-        .then([=](concurrency::task<uint32_t> loadOp)
+    continue_void_task(reader->LoadAsync(256 * 1024),
+        [=](uint32_t loadOp)
     {
-        try
-        {
-            if (loadCallback)
-                loadCallback(loadOp.get());
-            if (loadOp.get() >= 256 * 1024)
-                finishedReader = true;
-            //else
-            //finishedData = true;
-        }
-        catch (Platform::OperationCanceledException^) { errorHandler("Canceled"); }
-        catch (Platform::Exception^ ex) { errorHandler(ex->Message); }
-        catch (...) { errorHandler("Unknown error"); }
-    });
+        if (loadCallback)
+            loadCallback(loadOp);
+        if (loadOp >= 256 * 1024)
+            finishedReader = true;
+    }, errorWrapper, cancelToken);
 
 }
 
@@ -254,7 +261,8 @@ bool GR::LoadMore()
         _loaderData.buffer.clear();
         if (_loaderData.reader != nullptr)
             delete _loaderData.reader;
-        _loaderData = {};
+		_loaderData.errorHandler = {};
+		_loaderData.loadCallback = {};
         return false;
     }
     catch (...)
@@ -267,7 +275,9 @@ bool GR::LoadMore()
             _loaderData.buffer.clear();
             if (_loaderData.reader != nullptr)
                 delete _loaderData.reader;
-            _loaderData = {};
+
+			_loaderData.errorHandler = {};
+			_loaderData.loadCallback = {};
             return false;
         }
         else
@@ -294,7 +304,7 @@ void GR::InitialLoad(Platform::Array<std::uint8_t>^ initialData, Windows::Storag
 {
     auto dataReader = ref new Windows::Storage::Streams::DataReader(inputStream);
     dataReader->InputStreamOptions = Windows::Storage::Streams::InputStreamOptions::ReadAhead;
-    _loaderData = { 0, std::vector<uint8_t>(begin(initialData), end(initialData)), dataReader, false, false, false, _loadCallback, _errorHandler };
+    _loaderData.init(0, std::vector<uint8_t>(begin(initialData), end(initialData)), dataReader, _loadCallback, _errorHandler);
     _loaderData.readSome();
 
     try
@@ -310,7 +320,9 @@ void GR::InitialLoad(Platform::Array<std::uint8_t>^ initialData, Windows::Storag
             _loaderData.buffer.clear();
             if (_loaderData.reader != nullptr)
                 delete _loaderData.reader;
-            _loaderData = {};
+
+			_loaderData.errorHandler = {};
+			_loaderData.loadCallback = {};
         }
         catch (...)
         {
@@ -321,7 +333,8 @@ void GR::InitialLoad(Platform::Array<std::uint8_t>^ initialData, Windows::Storag
                 if (_loaderData.reader != nullptr)
                     delete _loaderData.reader;
                 
-                _loaderData = {};
+				_loaderData.errorHandler = {};
+				_loaderData.loadCallback = {};
             }
         }
 
@@ -341,7 +354,6 @@ void GR::InitialLoad(Platform::Array<std::uint8_t>^ initialData, Windows::Storag
 void GR::OnSuspending(Object ^sender, SuspendingEventArgs ^e)
 {
     _suspended = true;
-
     _renderBitmap = nullptr;
     _d2dContext = nullptr;
 
@@ -362,7 +374,6 @@ void GR::OnResuming(Object ^sender, Object ^e)
 {
     _suspended = false;
     _startedRendering = false;
-
     RECT invalidateRect{ 0, 0, 1, 1 };
     _sisNative->Invalidate(invalidateRect);
 }
@@ -378,7 +389,9 @@ GR::~GifRenderer()
     {
         delete _loaderData.reader;
     }
-    _loaderData = {};
+    _loaderData.buffer.clear();
+	_loaderData.errorHandler = {};
+	_loaderData.loadCallback = {};
     _callback = nullptr;
     _timer = nullptr;
     _suspended = true;

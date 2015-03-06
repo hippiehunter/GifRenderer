@@ -18,6 +18,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)giflibpp.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)GifRenderer.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)pch.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)task_helper.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)VirtualSurfaceRenderer.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ZoomableImageControl.xaml.h">
       <DependentUpon>$(MSBuildThisFileDirectory)ZoomableImageControl.xaml</DependentUpon>

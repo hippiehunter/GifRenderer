@@ -57,7 +57,7 @@ namespace GifRenderer
       APPLY,
       SCHEDULE
     };
-
+	concurrency::cancellation_token _cancelToken;
     Microsoft::WRL::ComPtr<VirtualSurfaceUpdatesCallbackNative> _callback;
     Microsoft::WRL::ComPtr<IVirtualSurfaceImageSourceNative> _sisNative;
     Microsoft::WRL::ComPtr<ID2D1DeviceContext> _d2dContext;
