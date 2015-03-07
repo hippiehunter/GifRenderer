@@ -158,6 +158,7 @@ void ::GifRenderer::ZoomableImageControl::Retry_Clicked(Platform::Object^ sender
 	_initialSizeChanged = false;
 	_virtualSurfaceRenderer = nullptr;
 	_gifRenderer = nullptr;
+	scrollViewer->Visibility = Windows::UI::Xaml::Visibility::Visible;
 	Load();
 }
 
@@ -173,13 +174,11 @@ void ::GifRenderer::ZoomableImageControl::Load()
 	finish_task(continue_task(client->GetAsync(ref new Uri(_targetUrl), HttpCompletionOption::ResponseHeadersRead),
 		[=](HttpResponseMessage^ response)
 	{
-
 		auto contentLengthBox = response->Content->Headers->ContentLength;
 		_expectedByteCount = contentLengthBox != nullptr ? contentLengthBox->Value : 0;
 		return continue_task(response->Content->ReadAsInputStreamAsync(),
 							 [=](IInputStream^ responseStream)
 		{
-
 			return continue_task(responseStream->ReadAsync(ref new Buffer(4096), 4096, InputStreamOptions::ReadAhead),
 								 [=](IBuffer^ buffer)
 			{
@@ -206,4 +205,5 @@ void ::GifRenderer::ZoomableImageControl::ErrorHandler(Platform::String^ errorTe
 	progressStack->Opacity = 1.0;
 	retryButton->Opacity = 1.0;
 	loadText->Text = errorText;
+	scrollViewer->Visibility = Windows::UI::Xaml::Visibility::Collapsed;
 }
