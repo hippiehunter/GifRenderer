@@ -148,9 +148,6 @@ VirtualSurfaceRenderer::VirtualSurfaceRenderer(Platform::Array<std::uint8_t>^ in
 							properties.pixelFormat = D2D1_PIXEL_FORMAT{ DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_IGNORE };
 
 							ThrowIfFailed(_d2dContext->CreateBitmap(size, bufferData, bitmap->Buffers->Data[0]->Pitch, properties, _originalBitmap.ReleaseAndGetAddressOf()));
-							pBufferByteAccess.Reset();
-							pBuffer.Reset();
-							delete bitmap;
 							RECT invalidateRect{ 0, 0, _currentWidth, _currentHeight };
 							_sisNative->Invalidate(invalidateRect);
 
@@ -170,8 +167,6 @@ VirtualSurfaceRenderer::VirtualSurfaceRenderer(Platform::Array<std::uint8_t>^ in
 						_updateCallback((int) _imageSize.Width, (int) _imageSize.Height, _imageSource);
 						_updateCallback = nullptr;
 						_imageSource = nullptr;
-						delete imageSource;
-						delete _fileStream;
 						_fileStream = nullptr;
 						return task_from_result();
 					}, handle_errors, cancel);
@@ -641,8 +636,6 @@ concurrency::task<Windows::Storage::Streams::IRandomAccessStream^> VirtualSurfac
 						{
 							try
 							{
-								delete file;
-								delete storeFile;
 								return GetFileSource(Windows::Storage::ApplicationData::Current->TemporaryFolder->Path + L"\\" + targetFileName, false);
 							}
 							catch (Platform::Exception^ ex)

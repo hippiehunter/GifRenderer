@@ -60,39 +60,61 @@ void ::GifRenderer::ZoomableImageControl::AfterInitialLoad(Platform::Array<std::
 				double X = 12 - std::sin(Angle) * 12;
 				double Y = 12 + std::cos(Angle) * 12;
 
-				if (loadPercent > 0 && (int) X == 12 && (int) Y == 24)
+				if (loadPercent > 0 && (int)X == 12 && (int)Y == 24)
 					X += 0.01; // Never make the end the same as the start!
 
 				TheSegment->IsLargeArc = Angle >= 3.14159265;
 				TheSegment->Point = Point(X, Y);
 			}
 		});
+
+
+		auto cancelToken = cancelSource.get_token();
 		std::function<void(Platform::String^)> errorHandler([=](Platform::String^ errorText)
 		{
-			progressStack->Opacity = 1.0;
-			retryButton->Opacity = 1.0;
-			loadText->Text = errorText;
+			if (!cancelToken.is_canceled())
+			{
+				progressStack->Opacity = 1.0;
+				retryButton->Opacity = 1.0;
+				loadText->Text = errorText;
+			}
 		});
+
+		
 
 		std::function<void(int, int, Windows::UI::Xaml::Media::ImageSource^)> fn([=](int width, int height, Windows::UI::Xaml::Media::ImageSource^ source)
 		{
-			image->Height = _height = height;
-			image->Width = _width = width;
-			_initialSizeChanged = true;
-
-			delayed_ui_task(std::chrono::milliseconds(10), [=]()
+			if (!cancelToken.is_canceled())
 			{
-				if (!_canceled)
+				image->Height = _height = height;
+				image->Width = _width = width;
+				_initialSizeChanged = true;
+
+				delayed_ui_task(std::chrono::milliseconds(10), [=]()
 				{
-					// If the image is larger than the screen, zoom it out
-					image->Source = source;
-					auto zoomFactor = (float)std::min(scrollViewer->ViewportWidth / width, scrollViewer->ViewportHeight / height);
-					scrollViewer->MinZoomFactor = std::max(zoomFactor, 0.1f);
-					scrollViewer->MaxZoomFactor = 20;
-					scrollViewer->ChangeView(nullptr, nullptr, zoomFactor, true);
-					FadeIn->Begin();
-				}
-			});
+					try
+					{
+						if (!cancelToken.is_canceled())
+						{
+							// If the image is larger than the screen, zoom it out
+							image->Source = source;
+							auto zoomFactor = (float)std::min(scrollViewer->ViewportWidth / width, scrollViewer->ViewportHeight / height);
+							scrollViewer->MinZoomFactor = std::max(zoomFactor, 0.1f);
+							scrollViewer->MaxZoomFactor = 20;
+							scrollViewer->ChangeView(nullptr, nullptr, zoomFactor, true);
+							FadeIn->Begin();
+						}
+					}
+					catch (Platform::Exception^ ex)
+					{
+						OutputDebugString(ex->Message->Data());
+					}
+					catch (...)
+					{
+						OutputDebugString(L"unknown error loading image");
+					}
+				});
+			}
 		});
 
 		if (IsGif(initialData))
@@ -108,32 +130,47 @@ void ::GifRenderer::ZoomableImageControl::AfterInitialLoad(Platform::Array<std::
 
 void ::GifRenderer::ZoomableImageControl::UserControl_DataContextChanged(Windows::UI::Xaml::FrameworkElement^ sender, Windows::UI::Xaml::DataContextChangedEventArgs^ args)
 {
-	auto targetUrl = dynamic_cast<String^>(args->NewValue);
-	if (_targetUrl != targetUrl)
+	try
 	{
-		if (_targetUrl != nullptr)
+		auto targetUrl = dynamic_cast<String^>(args->NewValue);
+		if (_targetUrl != targetUrl)
 		{
-			cancelSource.cancel();
-			cancelSource = cancellation_token_source();
-			image->Source = nullptr;
-		}
-		_targetUrl = targetUrl;
-		_initialSizeChanged = false;
-		_virtualSurfaceRenderer = nullptr;
-		_gifRenderer = nullptr;
+			if (_targetUrl != nullptr)
+			{
+				cancelSource.cancel();
+				cancelSource = cancellation_token_source();
+				image->Source = nullptr;
+			}
+			_targetUrl = targetUrl;
+			_initialSizeChanged = false;
+			_virtualSurfaceRenderer = nullptr;
+			_gifRenderer = nullptr;
 
-		if (_targetUrl != nullptr)
-			Load();
+			if (_targetUrl != nullptr)
+				Load();
+		}
+	}
+	catch (...)
+	{
+		OutputDebugString(L"unknown error replacing data context");
 	}
 }
 
 void ::GifRenderer::ZoomableImageControl::UserControl_Unloaded(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e)
 {
-	cancelSource.cancel();
-	cancelSource = cancellation_token_source();
-	_virtualSurfaceRenderer = nullptr;
-	_gifRenderer = nullptr;
-	image->Source = nullptr;
+	try
+	{
+		FadeIn->Stop();
+		cancelSource.cancel();
+		cancelSource = cancellation_token_source();
+		_virtualSurfaceRenderer = nullptr;
+		_gifRenderer = nullptr;
+		image->Source = nullptr;
+	}
+	catch (...)
+	{
+		OutputDebugString(L"unknown error unloading control");
+	}
 }
 
 void ::GifRenderer::ZoomableImageControl::scrollViewer_ViewChanged(Platform::Object^ sender, Windows::UI::Xaml::Controls::ScrollViewerViewChangedEventArgs^ e)
@@ -166,16 +203,16 @@ void ::GifRenderer::ZoomableImageControl::Load()
 		auto contentLengthBox = response->Content->Headers->ContentLength;
 		_expectedByteCount = contentLengthBox != nullptr ? contentLengthBox->Value : 0;
 		return continue_task(response->Content->ReadAsInputStreamAsync(),
-							 [=](IInputStream^ responseStream)
+			[=](IInputStream^ responseStream)
 		{
 			return continue_task(responseStream->ReadAsync(ref new Buffer(4096), 4096, InputStreamOptions::ReadAhead),
-								 [=](IBuffer^ buffer)
+				[=](IBuffer^ buffer)
 			{
 				if (buffer->Length == 0)
 					return task_from_exception<void>(ref new Exception(E_FAIL, L"failed to read initial bytes of image"));
 
 				ComPtr<Windows::Storage::Streams::IBufferByteAccess> pBufferByteAccess;
-				ComPtr<IUnknown> pBuffer((IUnknown*) buffer);
+				ComPtr<IUnknown> pBuffer((IUnknown*)buffer);
 				pBuffer.As(&pBufferByteAccess);
 				byte* bufferData;
 				pBufferByteAccess->Buffer(&bufferData);
