@@ -12,7 +12,7 @@ typedef ::GifRenderer::GifRenderer GR;
 
 
 GR::GifRenderer(Array<std::uint8_t>^ initialData, IInputStream^ inputStream,
-    std::function<void(String^)>& errorHandler, std::function<void(int)>& loadCallback, cancellation_token cancelToken) : _cancelToken(cancelToken), _loaderData(cancelToken)
+    std::function<void(String^)>& errorHandler, std::function<void(int)>& loadCallback, std::function<void(int, int, Windows::UI::Xaml::Media::ImageSource^)> sizeLoaded, cancellation_token cancelToken) : _cancelToken(cancelToken), _loaderData(cancelToken)
 {
     _errorHandler = errorHandler;
     _loadCallback = loadCallback;
@@ -28,6 +28,7 @@ GR::GifRenderer(Array<std::uint8_t>^ initialData, IInputStream^ inputStream,
     _sisNative->RegisterForUpdatesNeeded(_callback.Get());
     _timer = ref new BasicTimer();
     CreateDeviceResources();
+	sizeLoaded(Width(), Height(), _imageSource);
 }
 
 void gif_user_data::readSome()
@@ -627,8 +628,6 @@ void GR::Update()
             {
                 RECT visibleBounds;
                 _sisNative->GetVisibleBounds(&visibleBounds);
-                D2D1_RECT_U rect = { 0, 0, Width(), Height() };
-
 
                 auto& renderedData = GetFrame(_lastFrame, _currentFrame);
                 _lastFrame = _currentFrame;

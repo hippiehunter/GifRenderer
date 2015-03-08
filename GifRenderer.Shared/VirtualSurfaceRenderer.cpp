@@ -43,7 +43,7 @@ concurrency::task<Windows::Storage::Streams::IRandomAccessStream^> VirtualSurfac
 }
 
 VirtualSurfaceRenderer::VirtualSurfaceRenderer(Platform::Array<std::uint8_t>^ initialData, Platform::String^ url,
-											   Windows::Storage::Streams::IInputStream^ inputStream, std::function<void(int, int)>& fn, std::function<void(int)> loadCallback,
+											   Windows::Storage::Streams::IInputStream^ inputStream, std::function<void(int, int, Windows::UI::Xaml::Media::ImageSource^)>& fn, std::function<void(int)> loadCallback,
 											   std::function<void(Platform::String^)>& errorHandler, concurrency::cancellation_token cancel) : _cancelToken(cancel)
 {
 	_errorHandler = errorHandler;
@@ -130,7 +130,7 @@ VirtualSurfaceRenderer::VirtualSurfaceRenderer(Platform::Array<std::uint8_t>^ in
 							CreateDeviceResources();
 
 
-							_updateCallback((int) _imageSize.Width, (int) _imageSize.Height);
+							_updateCallback((int) _imageSize.Width, (int) _imageSize.Height, _imageSource);
 							_updateCallback = nullptr;
 
 							D2D1_BITMAP_PROPERTIES properties;
@@ -167,7 +167,7 @@ VirtualSurfaceRenderer::VirtualSurfaceRenderer(Platform::Array<std::uint8_t>^ in
 											  [=](Windows::UI::Xaml::Media::Imaging::WriteableBitmap^ bitmap) -> task<void>
 					{
 						_imageSource = bitmap;
-						_updateCallback((int) _imageSize.Width, (int) _imageSize.Height);
+						_updateCallback((int) _imageSize.Width, (int) _imageSize.Height, _imageSource);
 						_updateCallback = nullptr;
 						_imageSource = nullptr;
 						delete imageSource;

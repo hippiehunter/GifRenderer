@@ -149,7 +149,7 @@ namespace GifRenderer
 
     internal:
         GifRenderer(Platform::Array<std::uint8_t>^ initialData, Windows::Storage::Streams::IInputStream^ inputStream,
-            std::function<void(Platform::String^)>& errorHandler, std::function<void(int)>& frameLoadedCallback, concurrency::cancellation_token cancelToken);
+            std::function<void(Platform::String^)>& errorHandler, std::function<void(int)>& frameLoadedCallback, std::function<void(int, int, Windows::UI::Xaml::Media::ImageSource^)> sizeLoaded, concurrency::cancellation_token cancelToken);
 
     public:
         property VirtualSurfaceImageSource^ ImageSource

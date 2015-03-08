@@ -574,25 +574,28 @@ public:
       }
     }
   }
+
+  struct revertHelper
+  {
+  private:
+	  UCALLBACK& _userData;
+  public:
+	  revertHelper(UCALLBACK& userData) : _userData(userData) {}
+	  revertHelper& operator=(const revertHelper &tmp) { _userData = tmp._userData; }
+	  ~revertHelper()
+	  {
+		  //revert the stream to the last known good read
+		  _userData.revert();
+	  }
+	  void checkpoint()
+	  {
+		  _userData.checkpoint();
+	  }
+  };
+
   void Slurp(UCALLBACK& userData)
   {
-    struct revertHelper
-    {
-    private:
-      UCALLBACK& _userData;
-    public:
-      revertHelper(UCALLBACK& userData) : _userData(userData) {}
-      ~revertHelper()
-      {
-        //revert the stream to the last known good read
-        _userData.revert();
-      }
-      void checkpoint()
-      {
-        _userData.checkpoint();
-      }
-    };
-    revertHelper helper(userData);
+	revertHelper helper(userData);
     std::vector<ExtensionBlock> localExtensionBlocks;
     for (;;)
     {

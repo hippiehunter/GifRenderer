@@ -62,9 +62,9 @@
         <ScrollViewer x:Name="scrollViewer" ViewChanged="scrollViewer_ViewChanged" 
                       HorizontalAlignment="Stretch" VerticalAlignment="Stretch" 
                       VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" 
-                      IsHorizontalRailEnabled="True" ZoomMode="Enabled">
+                      IsHorizontalRailEnabled="True" ZoomMode="Enabled" DoubleTapped="scrollViewer_DoubleTapped">
                 <Image x:Name="image" HorizontalAlignment="Center" VerticalAlignment="Center"
-                Stretch="Fill" Opacity="0" SizeChanged="image_SizeChanged"/>
+                Stretch="Fill" Opacity="0"/>
         </ScrollViewer>
     </Grid>
 </UserControl>

@@ -5,8 +5,10 @@
 
 #include "pch.h"
 #include "ZoomableImageControl.xaml.h"
-#include "task_helper.h"
+
 #include <robuffer.h>
+#include <chrono>
+#include "task_helper.h"
 
 using namespace GifRenderer;
 using namespace task_helper;
@@ -42,19 +44,6 @@ bool IsGif(Platform::Array<std::uint8_t>^ data)
 		data[5] == 0x61;   // a
 }
 
-void ::GifRenderer::ZoomableImageControl::ZoomToContent()
-{
-	// If the image is larger than the screen, zoom it out
-
-	auto imageWidth = image->Width != image->Width ? image->ActualWidth : image->Width;
-	auto imageHeight = image->Height != image->Height ? image->ActualHeight : image->Height;
-
-	auto zoomFactor = (float) std::min(scrollViewer->ViewportWidth / imageWidth, scrollViewer->ViewportHeight / imageHeight);
-	scrollViewer->MinZoomFactor = std::max(zoomFactor, 0.1f);
-	scrollViewer->MaxZoomFactor = 20;
-	scrollViewer->ChangeView(nullptr, nullptr, zoomFactor, true);
-}
-
 void ::GifRenderer::ZoomableImageControl::AfterInitialLoad(Platform::Array<std::uint8_t>^ initialData, Windows::Storage::Streams::IInputStream^ inputStream)
 {
 	if (initialData != nullptr && inputStream != nullptr)
@@ -85,23 +74,33 @@ void ::GifRenderer::ZoomableImageControl::AfterInitialLoad(Platform::Array<std::
 			loadText->Text = errorText;
 		});
 
+		std::function<void(int, int, Windows::UI::Xaml::Media::ImageSource^)> fn([=](int width, int height, Windows::UI::Xaml::Media::ImageSource^ source)
+		{
+			image->Height = _height = height;
+			image->Width = _width = width;
+			_initialSizeChanged = true;
+
+			delayed_ui_task(std::chrono::milliseconds(10), [=]()
+			{
+				if (!_canceled)
+				{
+					// If the image is larger than the screen, zoom it out
+					image->Source = source;
+					auto zoomFactor = (float)std::min(scrollViewer->ViewportWidth / width, scrollViewer->ViewportHeight / height);
+					scrollViewer->MinZoomFactor = std::max(zoomFactor, 0.1f);
+					scrollViewer->MaxZoomFactor = 20;
+					scrollViewer->ChangeView(nullptr, nullptr, zoomFactor, true);
+					FadeIn->Begin();
+				}
+			});
+		});
+
 		if (IsGif(initialData))
 		{
-			_gifRenderer = ref new ::GifRenderer::GifRenderer(initialData, inputStream, errorHandler, loadCallback, cancelSource.get_token());
-			image->Source = _gifRenderer->ImageSource;
+			_gifRenderer = ref new ::GifRenderer::GifRenderer(initialData, inputStream, errorHandler, loadCallback, fn, cancelSource.get_token());
 		}
 		else
 		{
-			std::function<void(int, int)> fn([=](int width, int height)
-			{
-				if (_virtualSurfaceRenderer != nullptr)
-				{
-					image->Height = height;
-					image->Width = width;
-					image->Source = _virtualSurfaceRenderer->ImageSource;
-				}
-			});
-
 			_virtualSurfaceRenderer = ref new VirtualSurfaceRenderer(initialData, _targetUrl, inputStream, fn, loadCallback, errorHandler, cancelSource.get_token());
 		}
 	}
@@ -125,16 +124,6 @@ void ::GifRenderer::ZoomableImageControl::UserControl_DataContextChanged(Windows
 
 		if (_targetUrl != nullptr)
 			Load();
-	}
-}
-
-void ::GifRenderer::ZoomableImageControl::image_SizeChanged(Platform::Object^ sender, Windows::UI::Xaml::SizeChangedEventArgs^ e)
-{
-	if (!_initialSizeChanged)
-	{
-		_initialSizeChanged = true;
-		ZoomToContent();
-		FadeIn->Begin();
 	}
 }
 
@@ -206,4 +195,28 @@ void ::GifRenderer::ZoomableImageControl::ErrorHandler(Platform::String^ errorTe
 	retryButton->Opacity = 1.0;
 	loadText->Text = errorText;
 	scrollViewer->Visibility = Windows::UI::Xaml::Visibility::Collapsed;
+}
+
+void ::GifRenderer::ZoomableImageControl::scrollViewer_DoubleTapped(Platform::Object^ sender, Windows::UI::Xaml::Input::DoubleTappedRoutedEventArgs^ e)
+{
+	if (_initialSizeChanged)
+	{
+		delayed_ui_task(std::chrono::milliseconds(100), [=]()
+		{
+			auto point = e->GetPosition(this);
+
+			auto viewportWidth = scrollViewer->ViewportWidth;
+			auto viewportHeight = scrollViewer->ViewportHeight;
+			auto scrollXOffset = scrollViewer->HorizontalOffset;
+			auto scrollYOffset = scrollViewer->VerticalOffset;
+			auto scrollZoom = scrollViewer->ZoomFactor;
+
+			auto baseZoomFactor = (float)std::min(viewportWidth / _width, viewportHeight / _height);
+
+			if (scrollViewer->ZoomFactor > baseZoomFactor * 2.0)
+				scrollViewer->ChangeView(nullptr, nullptr, baseZoomFactor, false);
+			else
+				scrollViewer->ChangeView(static_cast<double>(point.X) + scrollXOffset, static_cast<double>(point.Y) + scrollYOffset, scrollZoom * 1.7f, false);
+		});
+	}
 }

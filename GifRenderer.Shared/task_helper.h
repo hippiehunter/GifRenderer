@@ -1,6 +1,9 @@
 #pragma once
 
 #include <ppltasks.h>
+#include <agents.h>
+#include <memory>
+#include <chrono>
 
 
 namespace task_helper
@@ -210,5 +213,27 @@ namespace task_helper
 				errorHandler(ex);
 			}
 		});
+	}
+
+	ref class RefRegistrationToken
+	{
+	internal:
+		Windows::Foundation::EventRegistrationToken Value;
+	};
+
+	template <typename Func>
+	void delayed_ui_task(std::chrono::milliseconds delay, Func func)
+	{
+		Windows::UI::Xaml::DispatcherTimer^ timer = ref new Windows::UI::Xaml::DispatcherTimer();
+		auto registrationToken = ref new RefRegistrationToken();
+		registrationToken->Value = timer->Tick += ref new Windows::Foundation::EventHandler<Platform::Object^>([=](Platform::Object^ sender, Platform::Object^ e)
+		{
+			timer->Stop();
+			timer->Tick -= registrationToken->Value;
+			func();
+		});
+
+		timer->Interval = Windows::Foundation::TimeSpan{ delay.count() * 10000ULL };
+		timer->Start();
 	}
 }

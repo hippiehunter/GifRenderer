@@ -64,7 +64,7 @@ namespace GifRenderer
     Microsoft::WRL::ComPtr<ID2D1Bitmap> _renderBitmap;
     Microsoft::WRL::ComPtr<ID2D1Bitmap> _originalBitmap;
     Windows::Foundation::Size _imageSize;
-    std::function<void(int, int)> _updateCallback;
+    std::function<void(int, int, Windows::UI::Xaml::Media::ImageSource^)> _updateCallback;
     std::function<void(Platform::String^)> _errorHandler;
     std::function<void(int)> _loadCallback;
     Windows::Storage::Streams::IRandomAccessStream^ _fileStream;
@@ -110,7 +110,7 @@ namespace GifRenderer
 
   internal:
       VirtualSurfaceRenderer(Platform::Array<std::uint8_t>^ initialData, Platform::String^ url,
-          Windows::Storage::Streams::IInputStream^ inputStream, std::function<void(int, int)>& fn, std::function<void(int)> loadCallback,
+          Windows::Storage::Streams::IInputStream^ inputStream, std::function<void(int, int, Windows::UI::Xaml::Media::ImageSource^)>& fn, std::function<void(int)> loadCallback,
           std::function<void(Platform::String^)>& errorHandler, concurrency::cancellation_token);
     void ViewChanged(Platform::Object^ sender, Windows::UI::Xaml::Controls::ScrollViewerViewChangedEventArgs^ e);
 
