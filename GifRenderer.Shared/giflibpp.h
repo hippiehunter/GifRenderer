@@ -270,7 +270,9 @@ public:
     }
     else
     {
-      *nextByte = buf[buf[1]++];
+      auto bufValue = buf[buf[1]];
+      *nextByte = bufValue;
+      buf[1] = ((buf[1] + 1) & 0xFF);
       buf[0]--;
     }
   }

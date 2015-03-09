@@ -38,8 +38,8 @@ concurrency::task<Windows::Storage::Streams::IRandomAccessStream^> VirtualSurfac
 							 [](Windows::Storage::Streams::IRandomAccessStreamWithContentType^ accessStream)
 		{
 			return task_from_result(dynamic_cast<Windows::Storage::Streams::IRandomAccessStream^>(accessStream));
-		});
-	});
+        }, &default_error_handler<Windows::Storage::Streams::IRandomAccessStream^, Platform::Exception^>, _cancelToken);
+    }, &default_error_handler<Windows::Storage::Streams::IRandomAccessStream^, Platform::Exception^>, _cancelToken);
 }
 
 VirtualSurfaceRenderer::VirtualSurfaceRenderer(Platform::Array<std::uint8_t>^ initialData, Platform::String^ url,
@@ -84,12 +84,15 @@ VirtualSurfaceRenderer::VirtualSurfaceRenderer(Platform::Array<std::uint8_t>^ in
 
 	auto handle_errors = [=](Platform::Exception^ ex)
 	{
-		auto opCanceled = dynamic_cast<Platform::OperationCanceledException^>(ex);
-		if (opCanceled != nullptr)
-			_errorHandler("Canceled");
-		else
-			_errorHandler(ex->Message);
-
+		try
+		{
+			auto opCanceled = dynamic_cast<Platform::OperationCanceledException^>(ex);
+			if (opCanceled != nullptr)
+				_errorHandler("Canceled");
+			else
+				_errorHandler(ex->Message);
+		}
+		catch (...) {}
 		return task_from_result();
 	};
 
@@ -658,16 +661,23 @@ concurrency::task<Windows::Storage::Streams::IRandomAccessStream^> VirtualSurfac
 
 void VirtualSurfaceRenderer::ViewChanged(Platform::Object^ sender, Windows::UI::Xaml::Controls::ScrollViewerViewChangedEventArgs^ e)
 {
-	auto reframeWidth = (_imageSize.Width * std::min(1.0f, dynamic_cast<Windows::UI::Xaml::Controls::ScrollViewer^>(sender)->ZoomFactor));
-	auto reframeHeight = (_imageSize.Height * std::min(1.0f, dynamic_cast<Windows::UI::Xaml::Controls::ScrollViewer^>(sender)->ZoomFactor));
-	if (std::min((int) reframeWidth, (int) _imageSize.Width) != _currentWidth || std::min((int) reframeHeight, (int) _imageSize.Height) != _currentHeight)
+	try
 	{
-		_currentHeight = std::min((int) reframeHeight, (int) _imageSize.Height);
-		_currentWidth = std::min((int) reframeWidth, (int) _imageSize.Width);
-		if (_sisNative != nullptr)
+		auto reframeWidth = (_imageSize.Width * std::min(1.0f, dynamic_cast<Windows::UI::Xaml::Controls::ScrollViewer^>(sender)->ZoomFactor));
+		auto reframeHeight = (_imageSize.Height * std::min(1.0f, dynamic_cast<Windows::UI::Xaml::Controls::ScrollViewer^>(sender)->ZoomFactor));
+		if (std::min((int)reframeWidth, (int)_imageSize.Width) != _currentWidth || std::min((int)reframeHeight, (int)_imageSize.Height) != _currentHeight)
 		{
-			_sisNative->Resize(reframeWidth, reframeHeight);
-			_sisNative->Invalidate(RECT{ 0, 0, reframeWidth, reframeHeight });
+			_currentHeight = std::min((int)reframeHeight, (int)_imageSize.Height);
+			_currentWidth = std::min((int)reframeWidth, (int)_imageSize.Width);
+			if (_sisNative != nullptr)
+			{
+				_sisNative->Resize(reframeWidth, reframeHeight);
+				_sisNative->Invalidate(RECT{ 0, 0, reframeWidth, reframeHeight });
+			}
 		}
+	}
+	catch (...)
+	{
+		OutputDebugString(L"unknown error resizing");
 	}
 }

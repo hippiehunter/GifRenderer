@@ -202,15 +202,22 @@ namespace task_helper
 		{
 			try
 			{
-				resultTask.get();
+				try
+				{
+					resultTask.get();
+				}
+				catch (concurrency::task_canceled)
+				{
+					errorHandler(ref new Platform::OperationCanceledException());
+				}
+				catch (Platform::Exception^ ex)
+				{
+					errorHandler(ex);
+				}
 			}
-			catch (concurrency::task_canceled)
+			catch (...)
 			{
-				errorHandler(ref new Platform::OperationCanceledException());
-			}
-			catch (Platform::Exception^ ex)
-			{
-				errorHandler(ex);
+				OutputDebugString(L"unknown error in finish_task");
 			}
 		});
 	}
@@ -230,7 +237,14 @@ namespace task_helper
 		{
 			timer->Stop();
 			timer->Tick -= registrationToken->Value;
-			func();
+			try
+			{
+				func();
+			}
+			catch (...)
+			{
+				OutputDebugString(L"unknown error in delayed_ui_task");
+			}
 		});
 
 		timer->Interval = Windows::Foundation::TimeSpan{ delay.count() * 10000ULL };

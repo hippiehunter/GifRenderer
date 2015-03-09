@@ -119,11 +119,11 @@ void ::GifRenderer::ZoomableImageControl::AfterInitialLoad(Platform::Array<std::
 
 		if (IsGif(initialData))
 		{
-			_gifRenderer = ref new ::GifRenderer::GifRenderer(initialData, inputStream, errorHandler, loadCallback, fn, cancelSource.get_token());
+            _gifRenderer = ref new ::GifRenderer::GifRenderer(initialData, inputStream, errorHandler, loadCallback, fn, cancelToken);
 		}
 		else
 		{
-			_virtualSurfaceRenderer = ref new VirtualSurfaceRenderer(initialData, _targetUrl, inputStream, fn, loadCallback, errorHandler, cancelSource.get_token());
+            _virtualSurfaceRenderer = ref new VirtualSurfaceRenderer(initialData, _targetUrl, inputStream, fn, loadCallback, errorHandler, cancelToken);
 		}
 	}
 }
@@ -192,7 +192,11 @@ void ::GifRenderer::ZoomableImageControl::Load()
 {
 	auto errorHandler = [=](Exception^ ex)
 	{
-		ErrorHandler(ex->Message);
+		try
+		{
+			ErrorHandler(ex->Message);
+		}
+		catch (...) {}
 		return task_from_result();
 	};
 	auto client = ref new Windows::Web::Http::HttpClient();
@@ -208,19 +212,26 @@ void ::GifRenderer::ZoomableImageControl::Load()
 			return continue_task(responseStream->ReadAsync(ref new Buffer(4096), 4096, InputStreamOptions::ReadAhead),
 				[=](IBuffer^ buffer)
 			{
-				if (buffer->Length == 0)
-					return task_from_exception<void>(ref new Exception(E_FAIL, L"failed to read initial bytes of image"));
+				try
+				{
+					if (buffer->Length == 0)
+						return task_from_exception<void>(ref new Exception(E_FAIL, L"failed to read initial bytes of image"));
 
-				ComPtr<Windows::Storage::Streams::IBufferByteAccess> pBufferByteAccess;
-				ComPtr<IUnknown> pBuffer((IUnknown*)buffer);
-				pBuffer.As(&pBufferByteAccess);
-				byte* bufferData;
-				pBufferByteAccess->Buffer(&bufferData);
+					ComPtr<Windows::Storage::Streams::IBufferByteAccess> pBufferByteAccess;
+					ComPtr<IUnknown> pBuffer((IUnknown*)buffer);
+					pBuffer.As(&pBufferByteAccess);
+					byte* bufferData;
+					pBufferByteAccess->Buffer(&bufferData);
 
-				auto bufferBytes = ref new Platform::Array<std::uint8_t>(buffer->Length);
-				memcpy(bufferBytes->Data, bufferData, bufferBytes->Length);
-				AfterInitialLoad(bufferBytes, responseStream);
-				return task_from_result();
+					auto bufferBytes = ref new Platform::Array<std::uint8_t>(buffer->Length);
+					memcpy(bufferBytes->Data, bufferData, bufferBytes->Length);
+					AfterInitialLoad(bufferBytes, responseStream);
+					return task_from_result();
+				}
+				catch (...)
+				{
+					return task_from_exception<void>(ref new Exception(E_FAIL, L"failed to load initial image"));
+				}
 			}, errorHandler, cancelToken);
 		}, errorHandler, cancelToken);
 	}, errorHandler, cancelToken), errorHandler);
