@@ -19,7 +19,6 @@ Usage will look something like this:
 
 Limitations
 ===========
-* Only works with network url sources
 * strings displayed to user are not localized
 * Zoom options are not exposed
 
@@ -31,3 +30,4 @@ Awesome Things
 * Only renders when in view
 * Ultra High Performance C++ with Direct2D
 * Compatible with nearly every GIF (uses a modified GIFLIB)
+* Double tap to zoom
