@@ -6,8 +6,7 @@ Universal Windows(XAML) Image viewer for very high resolution images and GIFs
 
 Usage
 ===========
-
-Assuming your xmlns looks like this:
+First add the vcxproj's and shared project to your solution then, in the target xaml file assuming your xmlns looks like this:
 ```xml
     xmlns:gif="using:GifRenderer"
 ```
