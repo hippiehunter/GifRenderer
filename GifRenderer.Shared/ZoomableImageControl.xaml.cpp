@@ -239,10 +239,15 @@ void ::GifRenderer::ZoomableImageControl::Load()
 
 void ::GifRenderer::ZoomableImageControl::ErrorHandler(Platform::String^ errorText)
 {
-	progressStack->Opacity = 1.0;
-	retryButton->Opacity = 1.0;
-	loadText->Text = errorText;
-	scrollViewer->Visibility = Windows::UI::Xaml::Visibility::Collapsed;
+	try
+	{
+		progressStack->Opacity = 1.0;
+		retryButton->Opacity = 1.0;
+		loadText->Text = errorText;
+		scrollViewer->Visibility = Windows::UI::Xaml::Visibility::Collapsed;
+	}
+	catch(...)
+	{ }
 }
 
 void ::GifRenderer::ZoomableImageControl::scrollViewer_DoubleTapped(Platform::Object^ sender, Windows::UI::Xaml::Input::DoubleTappedRoutedEventArgs^ e)

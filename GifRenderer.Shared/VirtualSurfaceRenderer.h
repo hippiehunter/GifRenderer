@@ -93,6 +93,7 @@ namespace GifRenderer
       Windows::Storage::Streams::IInputStream^ inputStream, Platform::String^ url, concurrency::cancellation_token cancel);
 
     concurrency::task<void> LoadSome(Windows::Storage::Streams::IInputStream^ inputStream, Windows::Storage::Streams::IRandomAccessStream^ target, concurrency::cancellation_token cancel);
+	void LoadBitmap(concurrency::task<Windows::Storage::Streams::IRandomAccessStream^> fileStreamTask);
     void OnSuspending(Object ^sender, SuspendingEventArgs ^e);
     void OnResuming(Object ^sender, Object ^e);
     void CreateDeviceResources();

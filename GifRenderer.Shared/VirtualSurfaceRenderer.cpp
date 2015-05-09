@@ -42,6 +42,108 @@ concurrency::task<Windows::Storage::Streams::IRandomAccessStream^> VirtualSurfac
     }, &default_error_handler<Windows::Storage::Streams::IRandomAccessStream^, Platform::Exception^>, _cancelToken);
 }
 
+void VirtualSurfaceRenderer::LoadBitmap(task<Windows::Storage::Streams::IRandomAccessStream^> fileStreamTask)
+{
+	auto handle_errors = [=](Platform::Exception^ ex)
+	{
+		try
+		{
+			auto opCanceled = dynamic_cast<Platform::OperationCanceledException^>(ex);
+			if (opCanceled != nullptr)
+				_errorHandler("Canceled");
+			else
+				_errorHandler(ex->Message);
+		}
+		catch (...) {}
+		return task_from_result();
+	};
+
+	finish_task(continue_task(fileStreamTask,
+		[=](Windows::Storage::Streams::IRandomAccessStream^ fileStream) -> task<void>
+	{
+		_fileStream = fileStream;
+		auto imageSource = ref new RandomAccessStreamImageSource(_fileStream);
+		return continue_task(imageSource->GetInfoAsync(),
+			[=](ImageProviderInfo^ providerInfo) -> task<void>
+		{
+			_imageSize = providerInfo->ImageSize;
+
+			if (!_suspended)
+			{
+				if ((_imageSize.Width * _imageSize.Height) > (_maxRenderDimension * _maxRenderDimension * 2))
+				{
+					// Find aspect ratio for resize
+					auto nPercentW = (_maxRenderDimension / (float)_imageSize.Width);
+					auto nPercentH = (_maxRenderDimension / (float)_imageSize.Height);
+					_overallImageScale = nPercentH < nPercentW ? nPercentH : nPercentW;
+
+					auto reframeWidth = (long)(_imageSize.Width * _overallImageScale);
+					auto reframeHeight = (long)(_imageSize.Height * _overallImageScale);
+
+
+					_filterState = FilterState::APPLY;
+					return continue_task(imageSource->GetBitmapAsync(ref new Bitmap(Windows::Foundation::Size((float)reframeWidth, (float)reframeHeight), ColorMode::Bgra8888), OutputOption::PreserveAspectRatio),
+						[=](Bitmap^ bitmap) -> task<void>
+					{
+						if (!_suspended)
+						{
+							_imageSource = ref new VirtualSurfaceImageSource(_currentWidth = (int)reframeWidth, _currentHeight = (int)reframeHeight);
+							reinterpret_cast<IUnknown*>(_imageSource)->QueryInterface(IID_PPV_ARGS(&_sisNative));
+
+							ThrowIfFailed(_sisNative->RegisterForUpdatesNeeded(_callback.Get()));
+							CreateDeviceResources();
+
+
+							_updateCallback((int)_imageSize.Width, (int)_imageSize.Height, _imageSource);
+							_updateCallback = nullptr;
+
+							D2D1_BITMAP_PROPERTIES properties;
+							properties.dpiX = _displayInfo->RawDpiX;
+							properties.dpiY = _displayInfo->RawDpiY;
+							auto buffer = bitmap->Buffers->Data[0]->Buffer;
+							// Obtain IBufferByteAccess
+							ComPtr<Windows::Storage::Streams::IBufferByteAccess> pBufferByteAccess;
+							ComPtr<IUnknown> pBuffer((IUnknown*)buffer);
+							pBuffer.As(&pBufferByteAccess);
+							byte* bufferData;
+							pBufferByteAccess->Buffer(&bufferData);
+
+							D2D1_SIZE_U size = { (UINT)bitmap->Dimensions.Width, (UINT)bitmap->Dimensions.Height };
+							properties.pixelFormat = D2D1_PIXEL_FORMAT{ DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_IGNORE };
+
+							ThrowIfFailed(_d2dContext->CreateBitmap(size, bufferData, bitmap->Buffers->Data[0]->Pitch, properties, _originalBitmap.ReleaseAndGetAddressOf()));
+							RECT invalidateRect{ 0, 0, _currentWidth, _currentHeight };
+							_sisNative->Invalidate(invalidateRect);
+
+							_filterState = FilterState::WAIT;
+						}
+						return task_from_result();
+					}, handle_errors, _cancelToken);
+				}
+				else
+				{
+					auto wbmp = ref new Windows::UI::Xaml::Media::Imaging::WriteableBitmap((int)_imageSize.Width, (int)_imageSize.Height);
+					WriteableBitmapRenderer^ wbr = ref new WriteableBitmapRenderer(imageSource, wbmp);
+					return continue_task(wbr->RenderAsync(),
+						[=](Windows::UI::Xaml::Media::Imaging::WriteableBitmap^ bitmap) -> task<void>
+					{
+						_imageSource = bitmap;
+						_updateCallback((int)_imageSize.Width, (int)_imageSize.Height, _imageSource);
+						_updateCallback = nullptr;
+						_imageSource = nullptr;
+						_fileStream = nullptr;
+						return task_from_result();
+					}, handle_errors, _cancelToken);
+				}
+			}
+			else
+			{
+				return task_from_result();
+			}
+		}, handle_errors, _cancelToken);
+	}, handle_errors), handle_errors);
+}
+
 VirtualSurfaceRenderer::VirtualSurfaceRenderer(Platform::Array<std::uint8_t>^ initialData, Platform::String^ url,
 											   Windows::Storage::Streams::IInputStream^ inputStream, std::function<void(int, int, Windows::UI::Xaml::Media::ImageSource^)>& fn, std::function<void(int)> loadCallback,
 											   std::function<void(Platform::String^)>& errorHandler, concurrency::cancellation_token cancel) : _cancelToken(cancel)
@@ -82,111 +184,15 @@ VirtualSurfaceRenderer::VirtualSurfaceRenderer(Platform::Array<std::uint8_t>^ in
 		existsOnDisk = true;
 	}
 
-	auto handle_errors = [=](Platform::Exception^ ex)
-	{
-		try
-		{
-			auto opCanceled = dynamic_cast<Platform::OperationCanceledException^>(ex);
-			if (opCanceled != nullptr)
-				_errorHandler("Canceled");
-			else
-				_errorHandler(ex->Message);
-		}
-		catch (...) {}
-		return task_from_result();
-	};
-
-	finish_task(
-		continue_task(existsOnDisk ? GetFileSource(onDiskName, isUri) : GetImageSource(initialData, inputStream, url, cancel),
-					   [=](Windows::Storage::Streams::IRandomAccessStream^ fileStream) -> task<void>
-	{
-		_fileStream = fileStream;
-		auto imageSource = ref new RandomAccessStreamImageSource(_fileStream);
-		return continue_task(imageSource->GetInfoAsync(),
-								  [=](ImageProviderInfo^ providerInfo) -> task<void>
-		{
-			_imageSize = providerInfo->ImageSize;
-
-			if (!_suspended)
-			{
-				if ((_imageSize.Width * _imageSize.Height) > (_maxRenderDimension * _maxRenderDimension * 2))
-				{
-					// Find aspect ratio for resize
-					auto nPercentW = (_maxRenderDimension / (float) _imageSize.Width);
-					auto nPercentH = (_maxRenderDimension / (float) _imageSize.Height);
-					_overallImageScale = nPercentH < nPercentW ? nPercentH : nPercentW;
-
-					auto reframeWidth = (long) (_imageSize.Width * _overallImageScale);
-					auto reframeHeight = (long) (_imageSize.Height * _overallImageScale);
-
-
-					_filterState = FilterState::APPLY;
-					return continue_task(imageSource->GetBitmapAsync(ref new Bitmap(Windows::Foundation::Size((float) reframeWidth, (float) reframeHeight), ColorMode::Bgra8888), OutputOption::PreserveAspectRatio),
-											  [=](Bitmap^ bitmap) -> task<void>
-					{
-						if (!_suspended)
-						{
-							_imageSource = ref new VirtualSurfaceImageSource(_currentWidth = (int) reframeWidth, _currentHeight = (int) reframeHeight);
-							reinterpret_cast<IUnknown*>(_imageSource)->QueryInterface(IID_PPV_ARGS(&_sisNative));
-
-							ThrowIfFailed(_sisNative->RegisterForUpdatesNeeded(_callback.Get()));
-							CreateDeviceResources();
-
-
-							_updateCallback((int) _imageSize.Width, (int) _imageSize.Height, _imageSource);
-							_updateCallback = nullptr;
-
-							D2D1_BITMAP_PROPERTIES properties;
-							properties.dpiX = _displayInfo->RawDpiX;
-							properties.dpiY = _displayInfo->RawDpiY;
-							auto buffer = bitmap->Buffers->Data[0]->Buffer;
-							// Obtain IBufferByteAccess
-							ComPtr<Windows::Storage::Streams::IBufferByteAccess> pBufferByteAccess;
-							ComPtr<IUnknown> pBuffer((IUnknown*) buffer);
-							pBuffer.As(&pBufferByteAccess);
-							byte* bufferData;
-							pBufferByteAccess->Buffer(&bufferData);
-
-							D2D1_SIZE_U size = { (UINT) bitmap->Dimensions.Width, (UINT) bitmap->Dimensions.Height };
-							properties.pixelFormat = D2D1_PIXEL_FORMAT{ DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_IGNORE };
-
-							ThrowIfFailed(_d2dContext->CreateBitmap(size, bufferData, bitmap->Buffers->Data[0]->Pitch, properties, _originalBitmap.ReleaseAndGetAddressOf()));
-							RECT invalidateRect{ 0, 0, _currentWidth, _currentHeight };
-							_sisNative->Invalidate(invalidateRect);
-
-							_filterState = FilterState::WAIT;
-						}
-						return task_from_result();
-					}, handle_errors, cancel);
-				}
-				else
-				{
-					auto wbmp = ref new Windows::UI::Xaml::Media::Imaging::WriteableBitmap((int) _imageSize.Width, (int) _imageSize.Height);
-					WriteableBitmapRenderer^ wbr = ref new WriteableBitmapRenderer(imageSource, wbmp);
-					return continue_task(wbr->RenderAsync(),
-											  [=](Windows::UI::Xaml::Media::Imaging::WriteableBitmap^ bitmap) -> task<void>
-					{
-						_imageSource = bitmap;
-						_updateCallback((int) _imageSize.Width, (int) _imageSize.Height, _imageSource);
-						_updateCallback = nullptr;
-						_imageSource = nullptr;
-						_fileStream = nullptr;
-						return task_from_result();
-					}, handle_errors, cancel);
-				}
-			}
-			else
-			{
-				return task_from_result();
-			}
-		}, handle_errors, cancel);
-	}, handle_errors), handle_errors);
+	auto fileTask = concurrency::create_task(existsOnDisk ? GetFileSource(onDiskName, isUri) : GetImageSource(initialData, inputStream, url, cancel));
+	LoadBitmap(fileTask);
 }
 
 void VirtualSurfaceRenderer::OnSuspending(Object ^sender, SuspendingEventArgs ^e)
 {
 	_suspended = true;
 	_renderBitmap = nullptr;
+	_originalBitmap = nullptr;
 	_d2dContext = nullptr;
 
 	if (_d3dDevice != nullptr)
@@ -414,7 +420,7 @@ void VirtualSurfaceRenderer::Update()
 
 			ThrowIfFailed(_sisNative->GetUpdateRects(updateRects, rectCount));
 			requestedBounds = updateRects[0];
-			for (int i = 1; i < rectCount; i++)
+			for (DWORD i = 1; i < rectCount; i++)
 			{
 				if (updateRects[i].left < visibleBounds.left)
 					requestedBounds.left = updateRects[i].left;
@@ -510,7 +516,7 @@ void VirtualSurfaceRenderer::Update()
 		bool invalidate = false;
 		if (_originalBitmap != nullptr || _renderBitmap != nullptr)
 		{
-			for (int i = 0; i < rectCount; i++)
+			for (DWORD i = 0; i < rectCount; i++)
 			{
 				POINT offset;
 				BeginDraw(offset, updateRects[i]);
@@ -534,6 +540,11 @@ void VirtualSurfaceRenderer::Update()
 
 bool VirtualSurfaceRenderer::DrawRequested(POINT offset, RECT requested, RECT overallRequested)
 {
+	if (_originalBitmap == nullptr)
+	{
+		LoadBitmap(concurrency::task_from_result(_fileStream));
+	}
+
 	if (_renderBitmap != nullptr && _filterState == FilterState::WAIT && _specificRender == overallRequested)
 	{
 		_d2dContext->SetTransform(
@@ -671,8 +682,8 @@ void VirtualSurfaceRenderer::ViewChanged(Platform::Object^ sender, Windows::UI::
 			_currentWidth = std::min((int)reframeWidth, (int)_imageSize.Width);
 			if (_sisNative != nullptr)
 			{
-				_sisNative->Resize(reframeWidth, reframeHeight);
-				_sisNative->Invalidate(RECT{ 0, 0, reframeWidth, reframeHeight });
+				_sisNative->Resize(static_cast<int>(reframeWidth), static_cast<int>(reframeHeight));
+				_sisNative->Invalidate(RECT{ 0, 0, static_cast<long>(reframeWidth), static_cast<long>(reframeHeight) });
 			}
 		}
 	}
