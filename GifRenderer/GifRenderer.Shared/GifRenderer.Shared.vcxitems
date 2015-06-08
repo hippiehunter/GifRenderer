@@ -1,0 +1,51 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup Label="Globals">
+    <MSBuildAllProjects>$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
+    <HasSharedItems>true</HasSharedItems>
+    <ItemsProjectGuid>{70157f55-8e24-4c98-979b-ca8e4d548d38}</ItemsProjectGuid>
+    <ItemsRootNamespace>GifRenderer</ItemsRootNamespace>
+    <ItemsProjectName>GifRenderer.Shared</ItemsProjectName>
+    <CodeSharingProject>248F659F-DAC5-46E8-AC09-60EC9FC95053</CodeSharingProject>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(MSBuildThisFileDirectory)</AdditionalIncludeDirectories>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ProjectCapability Include="SourceItemsFromImports" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\BasicTimer.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\D2DRenderer.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\GiflibImageDecoder.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\giflibpp.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\IImageDecoder.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\IImageRenderer.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\LumiaImageDecoder.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\WICImageDecoder.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\ZoomableImageControl.xaml.h">
+      <DependentUpon>$(MSBuildThisFileDirectory)..\..\ZoomableImageControl.xaml</DependentUpon>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)pch.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\ResourceLoader.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\task_helper.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\ImageFactory.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\D2DRenderer.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\GifLibImageDecoder.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\ImageFactory.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\LumiaImageDecoder.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\WICImageDecoder.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\ZoomableImageControl.xaml.cpp">
+      <DependentUpon>$(MSBuildThisFileDirectory)..\..\ZoomableImageControl.xaml</DependentUpon>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)pch.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\ResourceLoader.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <Page Include="$(MSBuildThisFileDirectory)..\..\ZoomableImageControl.xaml" />
+  </ItemGroup>
+</Project>
