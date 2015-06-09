@@ -150,56 +150,78 @@ task<IRandomAccessStream^> ResourceLoader::BufferRandomAccessStream(IRandomAcces
 
 task<IRandomAccessStream^> ResourceLoader::GetHttpUri()
 {
-	auto errorHandler = make_error_handler<IRandomAccessStream^, Exception^>();
-	auto client = ref new HttpClient();
-	return continue_task(client->GetAsync(ref new Uri(_resourceLocator), HttpCompletionOption::ResponseHeadersRead),
-		[=](HttpResponseMessage^ response)
+	auto targetFileName = ApplicationData::Current->TemporaryFolder->Path + L"\\deleteme" + ComputeMD5(_resourceLocator) + L".cacheDownload";
+	struct _stat64i32 statVar;
+	if (_wstat(targetFileName->Data(), &statVar) == 0)
 	{
-		auto contentLengthBox = response->Content->Headers->ContentLength;
-		_expectedByteCount = contentLengthBox != nullptr ? static_cast<uint32_t>(contentLengthBox->Value) : 0;
-		return continue_task(response->Content->ReadAsInputStreamAsync(),
-			[=](IInputStream^ responseStream)
+		return continue_task(Windows::Storage::StorageFile::GetFileFromPathAsync(targetFileName),
+			[=](Windows::Storage::StorageFile^ storageFile)
 		{
-			return continue_task(responseStream->ReadAsync(ref new Buffer(4096), 4096, InputStreamOptions::ReadAhead),
-				[=](IBuffer^ buffer)
+			return LoadStorageFile(storageFile);
+		}, &default_error_handler<Windows::Storage::Streams::IRandomAccessStream^, Platform::Exception^>, _cancelToken);
+	}
+	else
+	{
+		auto errorHandler = make_error_handler<IRandomAccessStream^, Exception^>();
+		auto client = ref new HttpClient();
+		return continue_task(client->GetAsync(ref new Uri(_resourceLocator), HttpCompletionOption::ResponseHeadersRead),
+			[=](HttpResponseMessage^ response)
+		{
+			auto contentLengthBox = response->Content->Headers->ContentLength;
+			_expectedByteCount = contentLengthBox != nullptr ? static_cast<uint32_t>(contentLengthBox->Value) : 0;
+			return continue_task(response->Content->ReadAsInputStreamAsync(),
+				[=](IInputStream^ responseStream)
 			{
-				try
+				return continue_task(responseStream->ReadAsync(ref new Buffer(4096), 4096, InputStreamOptions::ReadAhead),
+					[=](IBuffer^ buffer)
 				{
-					if (buffer->Length == 0)
-						return task_from_exception<IRandomAccessStream^>(ref new Exception(E_FAIL, L"failed to read initial bytes of image"));
-
-					auto readHookResult = _initialReadHook(buffer, _expectedByteCount);
-					_dontBufferReadHook = std::get<0>(readHookResult);
-					_cacheResult = std::get<1>(readHookResult);
-
-					return continue_void_task(WriteBufferToResultStream(buffer, false),
-						[=]()
+					try
 					{
-						return continue_void_task(ReadSomeHttp(responseStream),
+						if (buffer->Length == 0)
+							return task_from_exception<IRandomAccessStream^>(ref new Exception(E_FAIL, L"failed to read initial bytes of image"));
+
+						auto readHookResult = _initialReadHook(buffer, _expectedByteCount);
+						_dontBufferReadHook = std::get<0>(readHookResult);
+						_cacheResult = std::get<1>(readHookResult);
+
+						return continue_void_task(WriteBufferToResultStream(buffer, false),
 							[=]()
 						{
-							if (_cacheResult)
+							return continue_void_task(ReadSomeHttp(responseStream),
+								[=]()
 							{
-								if (_cacheWriter != nullptr)
-									_cacheWriter->Seek(0);
-								return task_from_result(_cacheWriter);
-							}
-							else
-							{
-								if (_inMemoryWriter != nullptr)
-									_inMemoryWriter->Seek(0);
-								return task_from_result(dynamic_cast<IRandomAccessStream^>(_inMemoryWriter));
-							}
+								if (_cacheResult)
+								{
+									if (_cacheWriter != nullptr)
+									{
+										delete _cacheWriter;
+										_cacheWriter = nullptr;
+										return continue_task(Windows::Storage::StorageFile::GetFileFromPathAsync(targetFileName),
+											[=](Windows::Storage::StorageFile^ storageFile)
+										{
+											return LoadStorageFile(storageFile);
+										}, &default_error_handler<Windows::Storage::Streams::IRandomAccessStream^, Platform::Exception^>, _cancelToken);
+									}
+									else
+										task_from_exception<IRandomAccessStream^>(ref new Platform::InvalidArgumentException("cache writer was null"));
+								}
+								else
+								{
+									if (_inMemoryWriter != nullptr)
+										_inMemoryWriter->Seek(0);
+									return task_from_result(dynamic_cast<IRandomAccessStream^>(_inMemoryWriter));
+								}
+							}, errorHandler, _cancelToken);
 						}, errorHandler, _cancelToken);
-					}, errorHandler, _cancelToken);
-				}
-				catch (...)
-				{
-					return task_from_exception<IRandomAccessStream^>(ref new Exception(E_FAIL, L"failed to load initial image"));
-				}
+					}
+					catch (...)
+					{
+						return task_from_exception<IRandomAccessStream^>(ref new Exception(E_FAIL, L"failed to load initial image"));
+					}
+				}, errorHandler, _cancelToken);
 			}, errorHandler, _cancelToken);
 		}, errorHandler, _cancelToken);
-	}, errorHandler, _cancelToken);
+	}
 }
 
 task<void> ResourceLoader::ReadSomeHttp(IInputStream^ inputStream)
