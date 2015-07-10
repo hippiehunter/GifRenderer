@@ -126,6 +126,30 @@ namespace task_helper
 		});
 	}
 
+  template<typename TASK, typename HANDLER, typename ERROR_HANDLER, typename TASK_EXTRAS,
+    typename TASK_RESULT = decltype(concurrency::create_task(std::declval<TASK>()))::result_type,
+    typename HANDLER_RESULT_TASK = std::result_of<HANDLER(TASK_RESULT)>::type>
+    auto continue_task_arbitrary(TASK continueFrom, HANDLER handler, ERROR_HANDLER errorHandler, TASK_EXTRAS extras) -> HANDLER_RESULT_TASK
+  {
+    typedef typename task_result_type<HANDLER_RESULT_TASK>::result_type HANDLER_RESULT;
+    return concurrency::create_task(continueFrom, extras).then([=](concurrency::task<TASK_RESULT> resultTask)
+    {
+      try
+      {
+        auto result = resultTask.get();
+        return handler(result);
+      }
+      catch (concurrency::task_canceled)
+      {
+        return errorHandler(ref new Platform::OperationCanceledException());
+      }
+      catch (Platform::Exception^ ex)
+      {
+        return errorHandler(ex);
+      }
+    }, concurrency::task_continuation_context::use_arbitrary());
+  }
+
 	template<typename HANDLER, typename ERROR_HANDLER,
 		typename TASK_RESULT,
 		typename HANDLER_RESULT_TASK = std::result_of<HANDLER(TASK_RESULT)>::type>

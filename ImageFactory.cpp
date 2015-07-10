@@ -35,17 +35,14 @@ task<tuple<shared_ptr<IImageRenderer>, ImageSource^>> ImageFactory::MakeRenderer
 					if (ImageFactory::IsGif(buffer))
 					{
 						imageFactory->_isGif = true;
-						ResourceLoader::GetBytesFromBuffer(buffer, [=](uint8_t* bytes, uint32_t byteCount)
-						{
-							auto handle_errors = [=](Platform::Exception^ ex) { completionSource.set_exception(ex); return task_from_result(); };
-							imageFactory->_decoder = GiflibImageDecoder::MakeImageDecoder(bytes, byteCount, cancelToken);
-							finish_task(continue_task(D2DRenderer::MakeRenderer(imageFactory->_decoder, dispatcher, cancelToken),
-								[=](tuple<shared_ptr<IImageRenderer>, ImageSource^> rslt) 
-								{
-									completionSource.set(std::move(rslt));
-									return task_from_result();
-								}, handle_errors), handle_errors);
-						});
+						auto handle_errors = [=](Platform::Exception^ ex) { completionSource.set_exception(ex); return task_from_result(); };
+						imageFactory->_decoder = GiflibImageDecoder::MakeImageDecoder(buffer, cancelToken);
+						finish_task(continue_task(D2DRenderer::MakeRenderer(imageFactory->_decoder, dispatcher, cancelToken),
+							[=](tuple<shared_ptr<IImageRenderer>, ImageSource^> rslt) 
+							{
+								completionSource.set(std::move(rslt));
+								return task_from_result();
+							}, handle_errors), handle_errors);
 						
 						return make_tuple(false, true);
 					}

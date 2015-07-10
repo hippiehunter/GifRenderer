@@ -647,8 +647,9 @@ private:
     SavedImage image;
     image.ImageDesc = GetImageDesc(userData);
     GifDecompressor < typename UCALLBACK > decompressor(userData, image.ImageDesc.Width * image.ImageDesc.Height);
-    if (image.ImageDesc.Width < 0 && image.ImageDesc.Height < 0 &&
-      image.ImageDesc.Width >(INT_MAX / image.ImageDesc.Height))
+    if (image.ImageDesc.Width < 0 || image.ImageDesc.Height < 0 ||
+      image.ImageDesc.Width >(INT_MAX / image.ImageDesc.Height) || 
+      image.ImageDesc.Width > SWidth || image.ImageDesc.Height > SHeight)
     {
       throw std::runtime_error("invalid image descriptor");
     }

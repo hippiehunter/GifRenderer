@@ -15,6 +15,7 @@ private:
 	uint32_t _expectedByteCount;
 	bool _cacheResult;
 	bool _dontBufferReadHook;
+  Windows::Storage::StorageFile^ _cachePartialFile;
 	Windows::Storage::Streams::IRandomAccessStream^ _cacheWriter;
 	Windows::Storage::Streams::InMemoryRandomAccessStream^ _inMemoryWriter;
 	concurrency::task<Windows::Storage::Streams::IRandomAccessStream^> LoadStorageFile(Windows::Storage::StorageFile^ storageFile);

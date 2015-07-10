@@ -33,7 +33,7 @@ WICImageDecoder::WICImageDecoder(Windows::Storage::Streams::IRandomAccessStream^
 
 			_defaultRenderSize = _currentRenderSize = DefaultSize();
 			auto resizedDefault = DecodeRectangleInternal(Windows::Foundation::Rect(0, 0, _currentRenderSize.Width, _currentRenderSize.Height));
-			ThrowIfFailed(_imagingFactory->CreateBitmapFromSource(resizedDefault.Get(), WICBitmapCreateCacheOption::WICBitmapCacheOnLoad, &_defaultBitmap));
+			ThrowIfFailed(_imagingFactory->CreateBitmapFromSource(resizedDefault.Get(), WICBitmapCreateCacheOption::WICBitmapNoCache, &_defaultBitmap));
 
 			_readySource.set();
 		}

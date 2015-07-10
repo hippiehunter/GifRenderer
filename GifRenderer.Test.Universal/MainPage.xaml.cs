@@ -31,9 +31,15 @@ namespace GifRenderer.Test.Universal
 
         private async void Page_Loaded(object sender, RoutedEventArgs e)
         {
-            var testFolder = await KnownFolders.PicturesLibrary.GetFolderAsync("test");
-            var files = await testFolder.GetFilesAsync();
-            picturesSource.Source = files.Select(file => file.Path);
+            //var testFolder = await KnownFolders.PicturesLibrary.GetFolderAsync("test");
+            //var files = await testFolder.GetFilesAsync();
+            picturesSource.Source = new string[]
+                {
+                    "http://i.imgur.com/N09lRMK.gif",
+                    "http://33.media.tumblr.com/67d4f233ae1080413313cd33af61888d/tumblr_mx9vdcr34f1t4taudo1_400.gif",
+                    "http://i.imgur.com/TtCvL2i.gif"
+
+                };//files.Select(file => file.Path);
         }
     }
 }

@@ -24,29 +24,67 @@ void GiflibImageDecoder::RenderSize(Size size)
 	_renderSize = size;
 }
 
-int gif_user_data::read(GifByteType * buf, unsigned int length)
+int gif_user_data::read(GifByteType * buf, unsigned int plength)
 {
-	auto egiLength = buffer.size();
+  auto targetEnd = position + plength;
 
-	if (position + length > egiLength)
-		return 0;
-	if (position == egiLength) 
-		return 0;
+  if (targetEnd > length)
+    return 0;
+  if (position == length)
+    return 0;
 
-	if (position + length == egiLength) 
-		length = egiLength - position;
+  if (targetEnd == length)
+    plength = length - position;
 
-	memcpy(buf, buffer.data() + position, length);
-	position += length;
+  int startBufferIndex = 0;
+  int endBufferIndex = 0;
+  int currentCopied = 0;
+  for (int foundPos = 0;endBufferIndex < buffer.size() && foundPos < targetEnd; ) 
+  {
+    foundPos += buffer[endBufferIndex]->Length;
+    if (buffer.size() > endBufferIndex && foundPos < targetEnd)
+      endBufferIndex++;
 
-	return length;
+    if (foundPos < position)
+      startBufferIndex++;
+  }
+
+  if (endBufferIndex >= buffer.size())
+    return 0;
+  //need to deal with block #2
+  int targetBufferStartPos = position;
+  for (unsigned int currentIndex = 0; currentIndex <= endBufferIndex; currentIndex++)
+  {
+    if (currentIndex >= startBufferIndex)
+    {
+      ResourceLoader::GetBytesFromBuffer(buffer[currentIndex], [&](uint8_t* bytes, uint32_t count)
+      {
+        unsigned int copyLength = 0;
+        copyLength = ((((plength) < (count - targetBufferStartPos)) ? (plength) : (count - targetBufferStartPos))) - currentCopied;
+        memcpy(buf + currentCopied, bytes + targetBufferStartPos, copyLength);
+        currentCopied += copyLength;
+      });
+      targetBufferStartPos = 0;
+    }
+    else
+    {
+      targetBufferStartPos -= buffer[currentIndex]->Length;
+    }
+    
+  }
+
+  if (currentCopied != plength)
+    throw std::runtime_error("read failed");
+
+  position += plength;
+
+  return plength;
 }
 
-void gif_user_data::addData(uint8_t* buf, uint32_t length)
+void gif_user_data::addData(IBuffer^ pBuffer)
 {
-	auto existingSize = buffer.size();
-	buffer.resize(existingSize + length);
-	memcpy(buffer.data() + existingSize, buf, length);
+  length += pBuffer->Length;
+  buffer.push_back(pBuffer);
 }
 
 
@@ -68,7 +106,7 @@ bool GiflibImageDecoder::Update(float total, float delta)
 	size_t i = 0;
 	for (; accountedFor < msDelta; i++)
 	{
-		if (i >= _gifFile->SavedImages.size())
+		if (i >= _frames.size())
 		{
 			if (_isLoaded)
 				i = 0;
@@ -100,7 +138,7 @@ bool GiflibImageDecoder::Update(float total, float delta)
 uint32_t GiflibImageDecoder::GetFrameDelay(size_t index) const { return _frames[index].delay; }
 size_t GiflibImageDecoder::FrameCount() const
 {
-	if (_frames.size() != _gifFile->SavedImages.size())
+	if (_frames.size() != _decodedImages.size())
 		throw ref new Platform::InvalidArgumentException("image count didnt match frame size");
 	return _frames.size();
 }
@@ -117,7 +155,7 @@ Rect GiflibImageDecoder::DecodeRectangle(Rect requestedRect, Microsoft::WRL::Com
 {
 	std::lock_guard<std::mutex> readGuard(_frameMutex);
 	requeue = true;
-	if (_gifFile->SavedImages.size() > 0)
+	if (_decodedImages.size() > 0)
 	{
 		if (!_startedRendering)
 			_timer->Reset();
@@ -154,49 +192,44 @@ void GiflibImageDecoder::Resume()
 
 void GiflibImageDecoder::LoadHandler(IBuffer^ buffer, bool finished, uint32_t expectedSize)
 {
-	ResourceLoader::GetBytesFromBuffer(buffer, [=](uint8_t* bytes, uint32_t byteCount)
+	try
 	{
 		std::lock_guard<std::mutex> readGuard(_loadMutex);
-		_loaderData.addData(bytes, byteCount);
-	});
-	Windows::System::Threading::ThreadPool::RunAsync(ref new Windows::System::Threading::WorkItemHandler([=](Windows::Foundation::IAsyncAction^)
-	{
+
+    _loaderData.addData(buffer);
+
+		if (_loaderData.buffer.size() == 0)
+			return;
+
 		try
 		{
-			std::lock_guard<std::mutex> readGuard(_loadMutex);
-			if (_loaderData.buffer.size() == 0)
-				return;
-
-			try
-			{
-				_gifFile->Slurp(_loaderData);
-				_isLoaded = true;
-				_loaderData.buffer.clear();
-			}
-			catch (...)
-			{
-				if (finished)
-				{
-					_isLoaded = true;
-					_loaderData.finishedLoad = true;
-					_loaderData.buffer.clear();
-				}
-			}
-
-			LoadGifFrames(_gifFile, _frames);
-
-			if (_gifFile->SavedImages.size() > 1)
-				_readySource.set();
-		}
-		catch (Platform::Exception^ ex)
-		{
-			OutputDebugString(ex->Message->Data());
+			_gifFile->Slurp(_loaderData);
+			_isLoaded = true;
+			_loaderData.buffer.clear();
 		}
 		catch (...)
 		{
-			OutputDebugString(L"unknown error handling gif load");
+			if (finished)
+			{
+				_isLoaded = true;
+				_loaderData.finishedLoad = true;
+				_loaderData.buffer.clear();
+			}
 		}
-	}));
+
+		LoadGifFrames(_gifFile, _frames);
+
+		if (_frames.size() > 0)
+			_readySource.set();
+	}
+	catch (Platform::Exception^ ex)
+	{
+		OutputDebugString(ex->Message->Data());
+	}
+	catch (...)
+	{
+		OutputDebugString(L"unknown error handling gif load");
+	}
 }
 
 
@@ -221,11 +254,11 @@ void GiflibImageDecoder::MapRasterBits(uint8_t* rasterBits, std::unique_ptr<uint
 	}
 }
 
-GiflibImageDecoder::GiflibImageDecoder(uint8_t* initialData, uint32_t initialDataSize, cancellation_token canceledToken) : _loaderData(canceledToken), _cancelToken(canceledToken)
+GiflibImageDecoder::GiflibImageDecoder(IBuffer^ initialBuffer, cancellation_token canceledToken) : _loaderData(canceledToken), _cancelToken(canceledToken)
 {
 	_currentFrame = 0;
 	_lastFrame = 0;
-	_loaderData.init(0, std::vector<uint8_t>(initialData, initialData + initialDataSize));
+	_loaderData.init(0, initialBuffer);
 	_gifFile = make_unique<GifFileType<gif_user_data>>(_loaderData);
 	_renderBuffer = nullptr;
 	_loaderData;
@@ -234,7 +267,7 @@ GiflibImageDecoder::GiflibImageDecoder(uint8_t* initialData, uint32_t initialDat
 	_timer = ref new BasicTimer();
 }
 
-std::shared_ptr<IImageDecoder> GiflibImageDecoder::MakeImageDecoder(uint8_t* initialData, uint32_t initialDataSize, cancellation_token canceledToken)
+std::shared_ptr<IImageDecoder> GiflibImageDecoder::MakeImageDecoder(IBuffer^ initialBuffer, cancellation_token canceledToken)
 {
-	return std::dynamic_pointer_cast<IImageDecoder>(make_shared<GiflibImageDecoder>(initialData, initialDataSize, canceledToken));
+	return std::dynamic_pointer_cast<IImageDecoder>(make_shared<GiflibImageDecoder>(initialBuffer, canceledToken));
 }

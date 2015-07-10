@@ -205,7 +205,7 @@ void D2DRenderer::CreateDeviceResources()
 
 #if defined(_DEBUG)    
 		// If the project is in a debug build, enable debugging via SDK Layers.
-		creationFlags |= D3D11_CREATE_DEVICE_DEBUG;
+		//creationFlags |= D3D11_CREATE_DEVICE_DEBUG;
 #endif
 
 		// This array defines the set of DirectX hardware feature levels this app will support.

@@ -37,32 +37,54 @@ struct GifFrame
 
 struct gif_user_data
 {
+  unsigned int length;
 	unsigned int position;
-	std::vector<uint8_t> buffer;
+  unsigned int revertPos;
+	std::vector<Windows::Storage::Streams::IBuffer^> buffer;
 	bool finishedLoad;
 	int read(GifByteType * buf, unsigned int length);
-	void addData(uint8_t* buf, uint32_t length);
+	void addData(Windows::Storage::Streams::IBuffer^ pbuffer);
 	gif_user_data(concurrency::cancellation_token pcancelToken)
 	{
 		finishedLoad = false;
 		position = 0;
 	}
 
-	void init(unsigned int pposition, std::vector<uint8_t> pbuffer)
+	void init(unsigned int pposition, Windows::Storage::Streams::IBuffer^ pbuffer)
 	{
+    revertPos = 0;
 		position = pposition;
-		buffer = pbuffer;
+    length = pbuffer->Length;
+		buffer.push_back(pbuffer);
 		finishedLoad = false;
 	}
 
 	void revert()
 	{
-		position = 0;
+		position = revertPos;
 	}
 	void checkpoint()
 	{
-		buffer.erase(buffer.begin(), buffer.begin() + position);
-		position = 0;
+    int endBufferIndex = 0;
+    int consumedBufferSize = 0;
+    int foundPos = 0;
+    for (;endBufferIndex < buffer.size() && foundPos < position; )
+    {
+      foundPos += buffer[endBufferIndex]->Length;
+      if (buffer.size() > endBufferIndex && foundPos < position)
+      {
+        endBufferIndex++;
+        consumedBufferSize += buffer[endBufferIndex]->Length;
+      }
+    }
+
+    if (position > buffer[0]->Length)
+    {
+      buffer.erase(buffer.begin(), buffer.begin() + endBufferIndex);
+    }
+    length -= consumedBufferSize;
+    revertPos = position - consumedBufferSize;
+		position = revertPos;
 	}
 };
 
@@ -73,6 +95,7 @@ private:
 	std::mutex _frameMutex;
 	std::unique_ptr<GifFileType<gif_user_data>> _gifFile;
 	std::vector<GifFrame> _frames;
+  std::vector<SavedImage> _decodedImages;
 	std::unique_ptr<uint32_t[]> _renderBuffer;
 	gif_user_data _loaderData;
 	Windows::Foundation::Size _renderSize;
@@ -88,8 +111,8 @@ private:
 	size_t FrameCount() const;
 	
 public:
-	static std::shared_ptr<IImageDecoder> MakeImageDecoder(uint8_t* initialData, uint32_t initialDataSize, concurrency::cancellation_token canceledToken);
-	GiflibImageDecoder(uint8_t* initialData, uint32_t initialDataSize, concurrency::cancellation_token canceledToken);
+	static std::shared_ptr<IImageDecoder> MakeImageDecoder(Windows::Storage::Streams::IBuffer^ initialBuffer, concurrency::cancellation_token canceledToken);
+	GiflibImageDecoder(Windows::Storage::Streams::IBuffer^ initialBuffer, concurrency::cancellation_token canceledToken);
 	virtual ~GiflibImageDecoder() {};
 	virtual void LoadHandler(Windows::Storage::Streams::IBuffer^ buffer, bool finished, uint32_t expectedSize);
 	virtual Windows::Foundation::Size MaxSize();
@@ -105,17 +128,19 @@ private:
 	void LoadGifFrames(GIFTYPE& gifFile, std::vector<GifFrame>& frames)
 	{
 		std::lock_guard<std::mutex> readGuard(_frameMutex);
+    std::copy(make_move_iterator(gifFile->SavedImages.begin()), make_move_iterator(gifFile->SavedImages.end()), std::back_inserter(_decodedImages));
+    gifFile->SavedImages.clear();
 		uint32_t width = gifFile->SWidth;
 		uint32_t height = gifFile->SHeight;
 
-		for (auto i = frames.size(); i < gifFile->SavedImages.size(); i++)
+		for (auto i = frames.size(); i < _decodedImages.size(); i++)
 		{
 			uint32_t delay = 100;
 			DISPOSAL_METHODS disposal = DISPOSAL_METHODS::DM_NONE;
 			int32_t transparentColor = -1;
 
-			auto extensionBlocks = gifFile->SavedImages[i].ExtensionBlocks;
-			for (size_t ext = 0; ext < gifFile->SavedImages[i].ExtensionBlocks.size(); ext++)
+			auto extensionBlocks = _decodedImages[i].ExtensionBlocks;
+			for (size_t ext = 0; ext < _decodedImages[i].ExtensionBlocks.size(); ext++)
 			{
 				if (extensionBlocks[ext].Function == 0xF9)
 				{
@@ -132,7 +157,7 @@ private:
 					transparentColor = gcb.TransparentColor;
 				}
 			}
-			auto& imageDesc = gifFile->SavedImages[i].ImageDesc;
+			auto& imageDesc = _decodedImages[i].ImageDesc;
 			int right = imageDesc.Left + imageDesc.Width;
 			int bottom = imageDesc.Top + imageDesc.Height;
 			int top = imageDesc.Top;
@@ -150,7 +175,7 @@ private:
 			frame.left = left;
 			frame.disposal = disposal;
 		}
-		if (frames.size() != gifFile->SavedImages.size())
+		if (frames.size() != _decodedImages.size())
 			throw ref new Platform::InvalidArgumentException("image count didnt match frame size");
 	}
 
@@ -193,10 +218,10 @@ private:
 			}
 		}
 
-		for (auto i = currentFrame; i < gifFile->SavedImages.size() && i <= targetFrame; i++)
+		for (auto i = currentFrame; i < _frames.size() && i <= targetFrame; i++)
 		{
 			auto& frame = frames[i];
-			auto& decodeFrame = gifFile->SavedImages[i];
+			auto& decodeFrame = _decodedImages[i];
 			auto disposal = frame.disposal;
 			auto colorMap = (decodeFrame.ImageDesc.ColorMap.Colors.size() != 0 ? decodeFrame.ImageDesc.ColorMap : (gifFile->SColorMap.Colors.size() != 0 ? gifFile->SColorMap : ColorMapObject{}));
 
