@@ -71,6 +71,8 @@
     <AppContainerApplication>true</AppContainerApplication>
     <ApplicationType>Windows Store</ApplicationType>
     <ApplicationTypeRevision>8.2</ApplicationTypeRevision>
+    <TargetPlatformVersion>10.0.10166.0</TargetPlatformVersion>
+    <TargetPlatformMinVersion>10.0.10166.0</TargetPlatformMinVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -164,7 +166,7 @@
       <AdditionalUsingDirectories>$(WindowsSDK_WindowsMetadata);$(AdditionalUsingDirectories)</AdditionalUsingDirectories>
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
       <DisableSpecificWarnings>28204</DisableSpecificWarnings>
-      <AdditionalIncludeDirectories>$(SolutionDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -181,7 +183,7 @@
       <AdditionalUsingDirectories>$(WindowsSDK_WindowsMetadata);$(AdditionalUsingDirectories)</AdditionalUsingDirectories>
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
       <DisableSpecificWarnings>28204</DisableSpecificWarnings>
-      <AdditionalIncludeDirectories>$(SolutionDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -198,7 +200,7 @@
       <AdditionalUsingDirectories>$(WindowsSDK_WindowsMetadata);$(AdditionalUsingDirectories)</AdditionalUsingDirectories>
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
       <DisableSpecificWarnings>28204</DisableSpecificWarnings>
-      <AdditionalIncludeDirectories>$(SolutionDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -215,7 +217,7 @@
       <AdditionalUsingDirectories>$(WindowsSDK_WindowsMetadata);$(AdditionalUsingDirectories)</AdditionalUsingDirectories>
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
       <DisableSpecificWarnings>28204</DisableSpecificWarnings>
-      <AdditionalIncludeDirectories>$(SolutionDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -232,7 +234,7 @@
       <AdditionalUsingDirectories>$(WindowsSDK_WindowsMetadata);$(AdditionalUsingDirectories)</AdditionalUsingDirectories>
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
       <DisableSpecificWarnings>28204</DisableSpecificWarnings>
-      <AdditionalIncludeDirectories>$(SolutionDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -249,7 +251,7 @@
       <AdditionalUsingDirectories>$(WindowsSDK_WindowsMetadata);$(AdditionalUsingDirectories)</AdditionalUsingDirectories>
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
       <DisableSpecificWarnings>28204</DisableSpecificWarnings>
-      <AdditionalIncludeDirectories>$(SolutionDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -259,50 +261,38 @@
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
-    <Import Project="..\packages\boost.1.58.0.0\build\native\boost.targets" Condition="Exists('..\packages\boost.1.58.0.0\build\native\boost.targets')" />
+    <Import Project="..\..\packages\boost.1.58.0.0\build\native\boost.targets" Condition="Exists('..\..\packages\boost.1.58.0.0\build\native\boost.targets')" />
   </ImportGroup>
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
       <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
     </PropertyGroup>
-    <Error Condition="!Exists('..\packages\boost.1.58.0.0\build\native\boost.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\boost.1.58.0.0\build\native\boost.targets'))" />
+    <Error Condition="!Exists('..\..\packages\boost.1.58.0.0\build\native\boost.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\boost.1.58.0.0\build\native\boost.targets'))" />
   </Target>
-  
   <Target Name="AfterBuild">
-
     <!-- Working directories, local repository directory and nuget command line exe -->
     <PropertyGroup>
-	  <SanePlatform>$(Platform)</SanePlatform>
-	  <SanePlatform Condition="'$(Platform)'=='Win32'">x86</SanePlatform>
+      <SanePlatform>$(Platform)</SanePlatform>
+      <SanePlatform Condition="'$(Platform)'=='Win32'">x86</SanePlatform>
       <NugetOutputDir>$(SolutionDir)Nuget\GifRenderer\</NugetOutputDir>
       <NugetOutputDirLibWinRT>$(NugetOutputDir)lib\win10.0\</NugetOutputDirLibWinRT>
-	  <NugetOutputDirBuildWinRT>$(NugetOutputDir)build\win10.0\$(SanePlatform)\</NugetOutputDirBuildWinRT>
+      <NugetOutputDirBuildWinRT>$(NugetOutputDir)build\win10.0\$(SanePlatform)\</NugetOutputDirBuildWinRT>
       <NugetCommandLine>C:\Program Files (x86)\NuGet\NuGet.exe</NugetCommandLine>
     </PropertyGroup>
-    
     <!-- Input, output and .nupkg files-->
     <ItemGroup>
       <NugetPkgFileOutput Include="$(SolutionDir)Nuget\GifRenderer\*.nupkg" />
-
       <NugetOutputFiles Include="$(NugetOutputDirLibWinRT)$(TargetFileName)" />
       <NugetOutputFiles Include="$(NugetOutputDirLibWinRT)$(ProjectPriFileName)" />
-      
       <NugetInputFiles Include="$(TargetPath)" />
       <NugetInputFiles Include="$(ProjectPriFullPath)" />
-	  <NugetInputFiles Include="$(OutputPath)*.xbf" />
-	  <NugetInputFiles Include="$(OutputPath)$(TargetName).pdb" />
-	  <NugetInputFiles Include="$(OutputPath)GifRenderer.winmd" />
+      <NugetInputFiles Include="$(OutputPath)*.xbf" />
+      <NugetInputFiles Include="$(OutputPath)$(TargetName).pdb" />
+      <NugetInputFiles Include="$(OutputPath)GifRenderer.winmd" />
     </ItemGroup>
-      
     <!-- Copy the .winmd and .pri files to Output lib winrt -->
-    <Copy Condition="'$(Configuration)'=='Release'"
-          SourceFiles="@(NugetInputFiles)" ContinueOnError="true"
-          DestinationFolder="$(NugetOutputDirBuildWinRT)" />
-		  
-		  <!-- Copy the .winmd and .pri files to Output lib winrt -->
-    <Copy Condition="'$(SanePlatform)'=='x86'"
-          SourceFiles="@(NugetInputFiles)" ContinueOnError="true"
-          DestinationFolder="$(NugetOutputDirLibWinRT)" />
-
+    <Copy Condition="'$(Configuration)'=='Release'" SourceFiles="@(NugetInputFiles)" ContinueOnError="true" DestinationFolder="$(NugetOutputDirBuildWinRT)" />
+    <!-- Copy the .winmd and .pri files to Output lib winrt -->
+    <Copy Condition="'$(SanePlatform)'=='x86'" SourceFiles="@(NugetInputFiles)" ContinueOnError="true" DestinationFolder="$(NugetOutputDirLibWinRT)" />
   </Target>
 </Project>
