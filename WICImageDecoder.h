@@ -11,16 +11,11 @@ class ResourceLoader;
 class WICImageDecoder : public IImageDecoder
 {
 private:
+  Windows::Storage::Streams::IRandomAccessStream^ _imageStream;
 	Windows::Foundation::Size _currentRenderSize;
+  Windows::Foundation::Size _imageSize;
 	concurrency::cancellation_token _cancelToken;
-	Microsoft::WRL::ComPtr<IWICImagingFactory> _imagingFactory;
-	Microsoft::WRL::ComPtr<IWICBitmapDecoder> _bitmapDecoder;
-	Microsoft::WRL::ComPtr<IWICBitmapFrameDecode> _baseBitmapFrame;
-	Microsoft::WRL::ComPtr<IWICBitmap> _defaultBitmap;
 	Windows::Foundation::Size _defaultRenderSize;
-
-	Microsoft::WRL::ComPtr<IWICBitmapSource> WICImageDecoder::DecodeRectangleInternal(Windows::Foundation::Rect requestedRect);
-
 public:
 	WICImageDecoder(Windows::Storage::Streams::IRandomAccessStream^ imageStream, concurrency::cancellation_token cancelToken);
 	static std::shared_ptr<IImageDecoder> MakeImageDecoder(Windows::Storage::Streams::IRandomAccessStream^ imageStream, concurrency::cancellation_token cancelToken);

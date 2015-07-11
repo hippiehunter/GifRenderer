@@ -389,10 +389,11 @@ task<void> ResourceLoader::CleanOldTemps()
   {
 
     auto cutoff = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch() - std::chrono::hours(96));
+    auto deletemeCutoff = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch() - std::chrono::hours(8));
     for (auto file : files)
     {
       auto dateCreated = toDuration(file->DateCreated);
-      if (dateCreated < cutoff || starts_with(std::wstring(file->Name->Data()), L"deleteme"))
+      if (dateCreated < cutoff || (dateCreated < deletemeCutoff && starts_with(std::wstring(file->Name->Data()), L"deleteme")))
         create_task(file->DeleteAsync()).then([](task<void> deleteResult) { try { deleteResult.get(); } catch (...) {} });
     }
 

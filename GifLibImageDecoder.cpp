@@ -241,7 +241,7 @@ void GiflibImageDecoder::MapRasterBits(uint8_t* rasterBits, std::unique_ptr<uint
 		for (int x = left; x < right; x++)
 		{
 			int offset = y * width + x;
-			int index = rasterBits[i];
+			uint8_t index = rasterBits[i];
 
 			if (transparencyColor == -1 ||
 				transparencyColor != index)

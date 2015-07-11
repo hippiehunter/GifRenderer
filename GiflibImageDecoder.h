@@ -249,7 +249,7 @@ private:
 				memcpy(buffer.get(), lastFrame.get(), width * height * sizeof(uint32_t));
 				break;
 			}
-			MapRasterBits(decodeFrame.RasterBits.get(), buffer, colorMap, frame.top, frame.left, frame.bottom, frame.right, width, frame.transparentColor);
+			MapRasterBits(decodeFrame.RasterBits.get(), buffer, colorMap, max(0, frame.top), max(frame.left, 0), min(height, frame.bottom), min(width, frame.right), width, frame.transparentColor);
 		}
 	}
 };

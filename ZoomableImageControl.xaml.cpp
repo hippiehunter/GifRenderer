@@ -94,14 +94,14 @@ void ::GifRenderer::ZoomableImageControl::scrollViewer_ViewChanged(Platform::Obj
 	if (_renderer != nullptr)
 	{
 		auto targetZoom = dynamic_cast<ScrollViewer^>(sender)->ZoomFactor;
-		if (targetZoom != _currentZoom)
+		if (targetZoom != _currentZoom && !e->IsIntermediate)
 		{
 			_currentZoom = targetZoom;
 			_renderer->ViewChanged(targetZoom);
 
-			auto renderSize = _renderer->Size();
+			/*auto renderSize = _renderer->Size();
 			image->Width = renderSize.Width;
-			image->Height = renderSize.Height;
+			image->Height = renderSize.Height;*/
 		}
 	}
 }
@@ -157,23 +157,21 @@ void ::GifRenderer::ZoomableImageControl::Load()
 					_initialSizeChanged = true;
 					// If the image is larger than the screen, zoom it out
 					image->Source = imageSource;
-					
-					auto renderSize = _renderer->Size();
+				
 					auto maxSize = _renderer->MaxSize();
 					if (ActualWidth != ActualWidth || ActualHeight != ActualHeight)
 						throw ref new Platform::Exception(0);
 
-					image->Width = renderSize.Width;
-					image->Height = renderSize.Height;
+					image->Width = maxSize.Width;
+					image->Height = maxSize.Height;
 
 					auto fillZoom = (float)min((ActualWidth / maxSize.Width), (ActualHeight / maxSize.Height));
-					auto renderZoom = (float)min((maxSize.Width / renderSize.Width), (maxSize.Height / renderSize.Height));
-					_currentZoom = min(20, max(fillZoom * renderZoom, 0.2f));
-					scrollViewer->MinZoomFactor = _currentZoom * .5f;
+					_currentZoom = min(20, max(fillZoom, 0.1f));
+					scrollViewer->MinZoomFactor = max(_currentZoom * .5f, .1f);
 					scrollViewer->MaxZoomFactor = 20;
 					delayed_ui_task(std::chrono::milliseconds(100), [=]()
 					{
-						if (scrollViewer->ChangeView(renderSize.Width / 2.0, renderSize.Width / 2.0, _currentZoom, true))
+						if (scrollViewer->ChangeView(maxSize.Width / 2.0, maxSize.Width / 2.0, _currentZoom, true))
 						{
 							FadeIn->Begin();
 						}
@@ -181,7 +179,7 @@ void ::GifRenderer::ZoomableImageControl::Load()
 						{
 							delayed_ui_task(std::chrono::milliseconds(100), [=]()
 							{
-								if (!scrollViewer->ChangeView(renderSize.Width / 2.0, renderSize.Width / 2.0, _currentZoom))
+								if (!scrollViewer->ChangeView(maxSize.Width / 2.0, maxSize.Width / 2.0, _currentZoom))
 									OutputDebugString(L"failed setting view");
 								FadeIn->Begin();
 							});
