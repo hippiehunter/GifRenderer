@@ -7,20 +7,20 @@
   IgnorableNamespaces="uap mp">
 
   <Identity
-    Name="684f1ae0-c1b4-4350-9368-b7548b657bd0"
-    Publisher="CN=hippi"
+    Name="5da642c8-8f4c-4fd1-9479-60fe6dc6ecaa"
+    Publisher="CN=greenej"
     Version="1.0.0.0" />
 
-  <mp:PhoneIdentity PhoneProductId="684f1ae0-c1b4-4350-9368-b7548b657bd0" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
+  <mp:PhoneIdentity PhoneProductId="5da642c8-8f4c-4fd1-9479-60fe6dc6ecaa" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
 
   <Properties>
     <DisplayName>GifRenderer.Test.Universal</DisplayName>
-    <PublisherDisplayName>hippi</PublisherDisplayName>
+    <PublisherDisplayName>greenej</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
   </Properties>
 
   <Dependencies>
-    <TargetDeviceFamily Name="Windows.Universal" MinVersion="10.0.10069.0" MaxVersionTested="10.0.10069.0" />
+    <TargetDeviceFamily Name="Windows.Universal" MinVersion="10.0.0.0" MaxVersionTested="10.0.0.0" />
   </Dependencies>
 
   <Resources>
@@ -33,17 +33,17 @@
       EntryPoint="GifRenderer.Test.Universal.App">
       <uap:VisualElements
         DisplayName="GifRenderer.Test.Universal"
-        Square150x150Logo="Assets\Logo.png"
-        Square44x44Logo="Assets\SmallLogo.png"
+        Square150x150Logo="Assets\Square150x150Logo.png"
+        Square44x44Logo="Assets\Square44x44Logo.png"
         Description="GifRenderer.Test.Universal"
-        BackgroundColor="#464646">
+        BackgroundColor="transparent">
+        <uap:DefaultTile Wide310x150Logo="Assets\Wide310x150Logo.png"/>
         <uap:SplashScreen Image="Assets\SplashScreen.png" />
       </uap:VisualElements>
     </Application>
   </Applications>
 
   <Capabilities>
-    <Capability Name="internetClientServer" />
-    <uap:Capability Name="picturesLibrary"/>
+    <Capability Name="internetClient" />
   </Capabilities>
 </Package>
