@@ -9,9 +9,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <None Include="packages.config" />
-  </ItemGroup>
-  <ItemGroup>
     <ClInclude Include="..\ZoomableImageControl.xaml.h" />
     <ClInclude Include="..\BasicTimer.h">
       <Filter>inc</Filter>
@@ -76,5 +73,8 @@
   </ItemGroup>
   <ItemGroup>
     <Page Include="..\ZoomableImageControl.xaml" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
   </ItemGroup>
 </Project>

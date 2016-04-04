@@ -27,9 +27,6 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <None Include="packages.config" />
-  </ItemGroup>
-  <ItemGroup>
     <ClInclude Include="..\BasicTimer.h" />
     <ClInclude Include="..\D2DRenderer.h" />
     <ClInclude Include="..\GiflibImageDecoder.h" />
@@ -60,6 +57,9 @@
   </ItemGroup>
   <ItemGroup>
     <Page Include="..\ZoomableImageControl.xaml" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{f311ff43-5aee-4f90-8371-aa1e41e02735}</ProjectGuid>
@@ -263,14 +263,8 @@
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
-    <Import Project="..\..\packages\boost.1.58.0.0\build\native\boost.targets" Condition="Exists('..\..\packages\boost.1.58.0.0\build\native\boost.targets')" />
+    <Import Project="..\..\packages\boost.1.60.0.0\build\native\boost.targets" Condition="Exists('..\..\packages\boost.1.60.0.0\build\native\boost.targets')" />
   </ImportGroup>
-  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
-    <PropertyGroup>
-      <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
-    </PropertyGroup>
-    <Error Condition="!Exists('..\..\packages\boost.1.58.0.0\build\native\boost.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\boost.1.58.0.0\build\native\boost.targets'))" />
-  </Target>
   <Target Name="AfterBuild">
     <!-- Working directories, local repository directory and nuget command line exe -->
     <PropertyGroup>
@@ -296,5 +290,11 @@
     <Copy Condition="'$(Configuration)'=='Release'" SourceFiles="@(NugetInputFiles)" ContinueOnError="true" DestinationFolder="$(NugetOutputDirBuildWinRT)" />
     <!-- Copy the .winmd and .pri files to Output lib winrt -->
     <Copy Condition="'$(SanePlatform)'=='x86'" SourceFiles="@(NugetInputFiles)" ContinueOnError="true" DestinationFolder="$(NugetOutputDirLibWinRT)" />
+  </Target>
+  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
+    </PropertyGroup>
+    <Error Condition="!Exists('..\..\packages\boost.1.60.0.0\build\native\boost.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\boost.1.60.0.0\build\native\boost.targets'))" />
   </Target>
 </Project>
