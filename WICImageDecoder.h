@@ -16,6 +16,11 @@ private:
   Windows::Foundation::Size _imageSize;
 	concurrency::cancellation_token _cancelToken;
 	Windows::Foundation::Size _defaultRenderSize;
+
+    Microsoft::WRL::ComPtr<IStream> _comImageStream;
+    Microsoft::WRL::ComPtr<IWICBitmapDecoder> _bitmapDecoder;
+    Microsoft::WRL::ComPtr<IWICBitmapFrameDecode> _baseBitmapFrame;
+    Microsoft::WRL::ComPtr<IWICImagingFactory> _imagingFactory;
 public:
 	WICImageDecoder(Windows::Storage::Streams::IRandomAccessStream^ imageStream, concurrency::cancellation_token cancelToken);
 	static std::shared_ptr<IImageDecoder> MakeImageDecoder(Windows::Storage::Streams::IRandomAccessStream^ imageStream, concurrency::cancellation_token cancelToken);

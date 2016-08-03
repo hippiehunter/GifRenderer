@@ -17,24 +17,18 @@ WICImageDecoder::WICImageDecoder(Windows::Storage::Streams::IRandomAccessStream^
 {
 	try
 	{
-    Microsoft::WRL::ComPtr<IStream> comImageStream;
-    Microsoft::WRL::ComPtr<IWICBitmapDecoder> bitmapDecoder;
-    Microsoft::WRL::ComPtr<IWICBitmapFrameDecode> baseBitmapFrame;
-    Microsoft::WRL::ComPtr<IWICImagingFactory> imagingFactory;
+        HRESULT hr = CoCreateInstance(CLSID_WICImagingFactory, NULL, CLSCTX_INPROC_SERVER,
+          IID_IWICImagingFactory, (LPVOID*)&_imagingFactory);
+        _imageStream = imageStream;
 
-    HRESULT hr = CoCreateInstance(CLSID_WICImagingFactory, NULL, CLSCTX_INPROC_SERVER,
-      IID_IWICImagingFactory, (LPVOID*)&imagingFactory);
-    _imageStream = imageStream;
-    
+        _imageStream->Seek(0);
+	    ThrowIfFailed(CreateStreamOverRandomAccessStream(_imageStream, __uuidof(IStream), &_comImageStream));
+	    ThrowIfFailed(_imagingFactory->CreateDecoderFromStream(_comImageStream.Get(), nullptr, WICDecodeMetadataCacheOnLoad, &_bitmapDecoder));
+	    ThrowIfFailed(_bitmapDecoder->GetFrame(0, &_baseBitmapFrame));
 
-    _imageStream->Seek(0);
-		ThrowIfFailed(CreateStreamOverRandomAccessStream(_imageStream, __uuidof(IStream), &comImageStream));
-		ThrowIfFailed(imagingFactory->CreateDecoderFromStream(comImageStream.Get(), nullptr, WICDecodeMetadataCacheOnLoad, &bitmapDecoder));
-		ThrowIfFailed(bitmapDecoder->GetFrame(0, &baseBitmapFrame));
-
-    UINT width, height;
-    ThrowIfFailed(baseBitmapFrame->GetSize(&width, &height));
-    _imageSize = Windows::Foundation::Size(static_cast<float>(width), static_cast<float>(height));
+        UINT width, height;
+        ThrowIfFailed(_baseBitmapFrame->GetSize(&width, &height));
+        _imageSize = Windows::Foundation::Size(static_cast<float>(width), static_cast<float>(height));
 
 		_defaultRenderSize = _currentRenderSize = DefaultSize();
 		_readySource.set();
@@ -90,29 +84,16 @@ Windows::Foundation::Rect WICImageDecoder::DecodeRectangle(Windows::Foundation::
   Microsoft::WRL::ComPtr<IWICBitmapScaler> scaler;
   Microsoft::WRL::ComPtr<IWICFormatConverter> converter;
   Microsoft::WRL::ComPtr<IWICBitmapSource> stageSource;
-  Microsoft::WRL::ComPtr<IStream> comImageStream;
-  Microsoft::WRL::ComPtr<IWICBitmapDecoder> bitmapDecoder;
-  Microsoft::WRL::ComPtr<IWICBitmapFrameDecode> baseBitmapFrame;
 
-  Microsoft::WRL::ComPtr<IWICImagingFactory> imagingFactory;
-
-  HRESULT hr = CoCreateInstance(CLSID_WICImagingFactory, NULL, CLSCTX_INPROC_SERVER,
-    IID_IWICImagingFactory, (LPVOID*)&imagingFactory);
-
-  _imageStream->Seek(0);
-  ThrowIfFailed(CreateStreamOverRandomAccessStream(_imageStream, __uuidof(IStream), &comImageStream));
-  ThrowIfFailed(imagingFactory->CreateDecoderFromStream(comImageStream.Get(), nullptr, WICDecodeMetadataCacheOnLoad, &bitmapDecoder));
-  ThrowIfFailed(bitmapDecoder->GetFrame(0, &baseBitmapFrame));
-
-  ThrowIfFailed(baseBitmapFrame.As(&stageSource));
+  ThrowIfFailed(_baseBitmapFrame.As(&stageSource));
 
   UINT imageWidth, imageHeight;
-  ThrowIfFailed(baseBitmapFrame->GetSize(&imageWidth, &imageHeight));
+  ThrowIfFailed(_baseBitmapFrame->GetSize(&imageWidth, &imageHeight));
 
   if (requestedRect.Left != 0 || requestedRect.Right != 0 ||
     requestedRect.Right != _currentRenderSize.Width || requestedRect.Bottom != _currentRenderSize.Height)
   {
-    ThrowIfFailed(imagingFactory->CreateBitmapClipper(&clipper));
+    ThrowIfFailed(_imagingFactory->CreateBitmapClipper(&clipper));
 
     auto nPercentW = ((float)imageWidth / _currentRenderSize.Width);
     auto nPercentH = ((float)imageHeight / _currentRenderSize.Height);
@@ -127,12 +108,12 @@ Windows::Foundation::Rect WICImageDecoder::DecodeRectangle(Windows::Foundation::
   if (_currentRenderSize.Width != static_cast<float>(imageWidth) ||
     _currentRenderSize.Height != static_cast<float>(imageHeight))
   {
-    ThrowIfFailed(imagingFactory->CreateBitmapScaler(&scaler));
+    ThrowIfFailed(_imagingFactory->CreateBitmapScaler(&scaler));
     ThrowIfFailed(scaler->Initialize(stageSource.Get(), requestedRect.Width, requestedRect.Height, WICBitmapInterpolationMode::WICBitmapInterpolationModeFant));
     ThrowIfFailed(scaler.As(&stageSource));
   }
 
-  ThrowIfFailed(imagingFactory->CreateFormatConverter(&converter));
+  ThrowIfFailed(_imagingFactory->CreateFormatConverter(&converter));
   ThrowIfFailed(converter->Initialize(stageSource.Get(), GUID_WICPixelFormat32bppPBGRA,
     WICBitmapDitherTypeNone, nullptr, 0.0f,
     WICBitmapPaletteTypeCustom));
