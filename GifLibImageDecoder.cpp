@@ -36,10 +36,10 @@ int gif_user_data::read(GifByteType * buf, unsigned int plength)
   if (targetEnd == length)
     plength = length - position;
 
-  int startBufferIndex = 0;
-  int endBufferIndex = 0;
-  int currentCopied = 0;
-  for (int foundPos = 0;endBufferIndex < buffer.size() && foundPos < targetEnd; ) 
+  unsigned int startBufferIndex = 0;
+  unsigned int endBufferIndex = 0;
+  unsigned int currentCopied = 0;
+  for (unsigned int foundPos = 0;endBufferIndex < buffer.size() && foundPos < targetEnd; ) 
   {
     foundPos += buffer[endBufferIndex]->Length;
     if (buffer.size() > endBufferIndex && foundPos < targetEnd)
@@ -83,6 +83,11 @@ int gif_user_data::read(GifByteType * buf, unsigned int plength)
 
 void gif_user_data::addData(IBuffer^ pBuffer)
 {
+  for (auto buf : buffer)
+  {
+      if (pBuffer == buf)
+          return; //dirty way to ensure no duplicate buffers
+  }
   length += pBuffer->Length;
   buffer.push_back(pBuffer);
 }
@@ -111,9 +116,11 @@ bool GiflibImageDecoder::Update(float total, float delta)
 			if (_isLoaded)
 				i = 0;
 			else
+			{
 				i = _frames.size() - 1;
+				break;
+			}
 		}
-
 		accountedFor += GetFrameDelay(i);
 	}
 	auto newFrame = std::max<int>((int)i - 1, 0);

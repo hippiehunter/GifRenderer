@@ -11,9 +11,9 @@ class ResourceLoader;
 class WICImageDecoder : public IImageDecoder
 {
 private:
-  Windows::Storage::Streams::IRandomAccessStream^ _imageStream;
+	Windows::Storage::Streams::IRandomAccessStream^ _imageStream;
 	Windows::Foundation::Size _currentRenderSize;
-  Windows::Foundation::Size _imageSize;
+	Windows::Foundation::Size _imageSize;
 	concurrency::cancellation_token _cancelToken;
 	Windows::Foundation::Size _defaultRenderSize;
 public:

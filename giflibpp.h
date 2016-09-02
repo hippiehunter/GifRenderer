@@ -519,6 +519,27 @@ GifWord GetWord(UCALLBACK& callback)
 template<typename UCALLBACK>
 class GifFileType
 {
+    struct revertHelper
+    {
+    private:
+        UCALLBACK& _userData;
+    public:
+        revertHelper(UCALLBACK& userData) : _userData(userData) {}
+        revertHelper& operator=(const revertHelper &tmp) { _userData = tmp._userData; }
+        ~revertHelper()
+        {
+            //revert the stream to the last known good read
+            _userData.revert();
+        }
+        void checkpoint(int negativePosition = 0)
+        {
+            if (negativePosition != 0)
+                _userData.retro_checkpoint(negativePosition);
+            else
+                _userData.checkpoint();
+        }
+    };
+
 public:
   GifWord SWidth, SHeight;                  /* Size of virtual canvas */
   GifWord SColorResolution;                 /* How many colors can we generate? */
@@ -530,6 +551,7 @@ public:
   bool Gif89;
   GifFileType(UCALLBACK& userData)
   {
+    revertHelper helper(userData);
     std::array<char, GIF_STAMP_LEN + 1> buf;
     /* Let's see if this is a GIF file: */
     if (userData.read((unsigned char *)&buf[0], GIF_STAMP_LEN) != GIF_STAMP_LEN)
@@ -577,25 +599,8 @@ public:
         SColorMap.Colors[i].Blue = buf[2];
       }
     }
+    helper.checkpoint();
   }
-
-  struct revertHelper
-  {
-  private:
-	  UCALLBACK& _userData;
-  public:
-	  revertHelper(UCALLBACK& userData) : _userData(userData) {}
-	  revertHelper& operator=(const revertHelper &tmp) { _userData = tmp._userData; }
-	  ~revertHelper()
-	  {
-		  //revert the stream to the last known good read
-		  _userData.revert();
-	  }
-	  void checkpoint()
-	  {
-		  _userData.checkpoint();
-	  }
-  };
 
   void Slurp(UCALLBACK& userData)
   {
@@ -633,6 +638,7 @@ public:
 
         case TERMINATE_RECORD_TYPE:
           ExtensionBlocks = localExtensionBlocks;
+          helper.checkpoint();
           return;
           break;
 

@@ -11,9 +11,9 @@ protected:
 	IImageDecoder() 
 	{ 
 #if WINDOWS_PHONE_APP
-		_maxRenderDimension = Windows::System::MemoryManager::AppMemoryUsageLimit > 300 * 1024 * 1024 ? 1024.0 : 400.0;
+		_maxRenderDimension = Windows::System::MemoryManager::AppMemoryUsageLimit > 300 * 1024 * 1024 ? 1024 : 400;
 #elif UWP
-		_maxRenderDimension = Windows::System::MemoryManager::AppMemoryUsageLimit > 300 * 1024 * 1024 ? 1024.0 : 400.0;
+		_maxRenderDimension = Windows::System::MemoryManager::AppMemoryUsageLimit > 300 * 1024 * 1024 ? 1024 : 400;
 #else
 		_maxRenderDimension = 2048;
 #endif

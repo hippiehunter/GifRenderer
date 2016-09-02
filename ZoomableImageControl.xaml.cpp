@@ -33,24 +33,29 @@ using std::shared_ptr;
 	InitializeComponent();
 }
 
-void ::GifRenderer::ZoomableImageControl::UserControl_DataContextChanged(Windows::UI::Xaml::FrameworkElement^ sender, Windows::UI::Xaml::DataContextChangedEventArgs^ args)
+DependencyProperty^ ::GifRenderer::ZoomableImageControl::_urlProperty = DependencyProperty::Register("Url",
+	String::typeid, ::GifRenderer::ZoomableImageControl::typeid, ref new PropertyMetadata(nullptr,
+		ref new Windows::UI::Xaml::PropertyChangedCallback(&::GifRenderer::ZoomableImageControl::OnUrlChanged)));
+
+void ::GifRenderer::ZoomableImageControl::OnUrlChanged(DependencyObject^ d, DependencyPropertyChangedEventArgs^ e)
 {
 	try
 	{
-		auto targetUrl = dynamic_cast<String^>(args->NewValue);
-		if (_targetUrl != targetUrl)
+		auto thisp = dynamic_cast<::GifRenderer::ZoomableImageControl^>(d);
+		auto targetUrl = dynamic_cast<String^>(e->NewValue);
+		if (thisp->_targetUrl != targetUrl)
 		{
-			if (_targetUrl != nullptr)
+			if (thisp->_targetUrl != nullptr)
 			{
-				cancelSource.cancel();
-				cancelSource = cancellation_token_source();
-				image->Source = nullptr;
+				thisp->cancelSource.cancel();
+				thisp->cancelSource = cancellation_token_source();
+				thisp->image->Source = nullptr;
 			}
-			_targetUrl = targetUrl;
-			_initialSizeChanged = false;
-			_renderer = nullptr;
-			if (_targetUrl != nullptr)
-				Load();
+			thisp->_targetUrl = targetUrl;
+			thisp->_initialSizeChanged = false;
+			thisp->_renderer = nullptr;
+			if (thisp->_targetUrl != nullptr)
+				thisp->Load();
 		}
 	}
 	catch (...)

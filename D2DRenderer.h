@@ -61,5 +61,11 @@ public:
 	virtual void Suspend();
 	virtual void Resume();
 	virtual void ViewChanged(float zoomFactor);
-	virtual ~D2DRenderer() {};
+	virtual ~D2DRenderer() 
+	{
+		if (_sisNative != nullptr)
+		{
+			_sisNative->Invalidate(RECT{ 0, 0, _currentWidth, _currentHeight });
+		}
+	};
 };

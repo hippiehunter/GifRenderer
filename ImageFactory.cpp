@@ -62,6 +62,10 @@ task<tuple<shared_ptr<IImageRenderer>, ImageSource^>> ImageFactory::MakeRenderer
 					//dont divide by zero when there is no expected or an invalid expected size
 					if (expectedSize > 0)
 						loadProgressCallback((static_cast<float>(imageFactory->_loadedBytes) / static_cast<float>(expectedSize)));
+					else
+					{
+						OutputDebugString(L"Invalid expected size");
+					}
 				}, cancelToken),
 			[=](IRandomAccessStream^ resultStream)
 			{

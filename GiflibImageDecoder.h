@@ -37,9 +37,9 @@ struct GifFrame
 
 struct gif_user_data
 {
-  unsigned int length;
+	unsigned int length;
 	unsigned int position;
-  unsigned int revertPos;
+	unsigned int revertPos;
 	std::vector<Windows::Storage::Streams::IBuffer^> buffer;
 	bool finishedLoad;
 	int read(GifByteType * buf, unsigned int length);
@@ -52,9 +52,9 @@ struct gif_user_data
 
 	void init(unsigned int pposition, Windows::Storage::Streams::IBuffer^ pbuffer)
 	{
-    revertPos = 0;
+		revertPos = 0;
 		position = pposition;
-    length = pbuffer->Length;
+		length = pbuffer->Length;
 		buffer.push_back(pbuffer);
 		finishedLoad = false;
 	}
@@ -63,28 +63,41 @@ struct gif_user_data
 	{
 		position = revertPos;
 	}
+	void retro_checkpoint(int negativePosition)
+	{
+		int realPosition = position;
+		position -= negativePosition;
+		checkpoint();
+		position = realPosition;
+	}
+
 	void checkpoint()
 	{
-    int endBufferIndex = 0;
-    int consumedBufferSize = 0;
-    int foundPos = 0;
-    for (;endBufferIndex < buffer.size() && foundPos < position; )
-    {
-      foundPos += buffer[endBufferIndex]->Length;
-      if (buffer.size() > endBufferIndex && foundPos < position)
-      {
-        endBufferIndex++;
-        consumedBufferSize += buffer[endBufferIndex]->Length;
-      }
-    }
+		unsigned int endBufferIndex = 0;
+		unsigned int consumedBufferSize = 0;
+		unsigned int foundPos = 0;
+		for (;endBufferIndex < buffer.size() && foundPos < position; )
+		{
+			foundPos += buffer[endBufferIndex]->Length;
+			if (buffer.size() > endBufferIndex && foundPos < position)
+			{
+				consumedBufferSize += buffer[endBufferIndex++]->Length;
+			}
+		}
 
-    if (position > buffer[0]->Length)
-    {
-      buffer.erase(buffer.begin(), buffer.begin() + endBufferIndex);
-    }
-    length -= consumedBufferSize;
-    revertPos = position - consumedBufferSize;
+		if (((int)position - (int)consumedBufferSize) < 0)
+		{
+			throw std::runtime_error("invalid position");
+		}
+
+		if (position > buffer[0]->Length)
+		{
+			buffer.erase(buffer.begin(), buffer.begin() + endBufferIndex);
+		}
+		length -= consumedBufferSize;
+		revertPos = position - consumedBufferSize;
 		position = revertPos;
+		
 	}
 };
 
@@ -95,7 +108,7 @@ private:
 	std::mutex _frameMutex;
 	std::unique_ptr<GifFileType<gif_user_data>> _gifFile;
 	std::vector<GifFrame> _frames;
-  std::vector<SavedImage> _decodedImages;
+	std::vector<SavedImage> _decodedImages;
 	std::unique_ptr<uint32_t[]> _renderBuffer;
 	gif_user_data _loaderData;
 	Windows::Foundation::Size _renderSize;
@@ -109,7 +122,7 @@ private:
 	bool Update(float total, float delta);
 	uint32_t GetFrameDelay(size_t index) const;
 	size_t FrameCount() const;
-	
+
 public:
 	static std::shared_ptr<IImageDecoder> MakeImageDecoder(Windows::Storage::Streams::IBuffer^ initialBuffer, concurrency::cancellation_token canceledToken);
 	GiflibImageDecoder(Windows::Storage::Streams::IBuffer^ initialBuffer, concurrency::cancellation_token canceledToken);
@@ -128,8 +141,8 @@ private:
 	void LoadGifFrames(GIFTYPE& gifFile, std::vector<GifFrame>& frames)
 	{
 		std::lock_guard<std::mutex> readGuard(_frameMutex);
-    std::copy(make_move_iterator(gifFile->SavedImages.begin()), make_move_iterator(gifFile->SavedImages.end()), std::back_inserter(_decodedImages));
-    gifFile->SavedImages.clear();
+		std::copy(make_move_iterator(gifFile->SavedImages.begin()), make_move_iterator(gifFile->SavedImages.end()), std::back_inserter(_decodedImages));
+		gifFile->SavedImages.clear();
 		uint32_t width = gifFile->SWidth;
 		uint32_t height = gifFile->SHeight;
 
@@ -249,7 +262,7 @@ private:
 				memcpy(buffer.get(), lastFrame.get(), width * height * sizeof(uint32_t));
 				break;
 			}
-			MapRasterBits(decodeFrame.RasterBits.get(), buffer, colorMap, max(0, frame.top), max(frame.left, 0), min(height, frame.bottom), min(width, frame.right), width, frame.transparentColor);
+			MapRasterBits(decodeFrame.RasterBits.get(), buffer, colorMap, max(0, frame.top), max(frame.left, 0), min((int)height, frame.bottom), min((int)width, frame.right), (int)width, frame.transparentColor);
 		}
 	}
 };

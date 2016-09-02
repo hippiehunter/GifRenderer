@@ -27,15 +27,26 @@ namespace GifRenderer
 		float _currentZoom;
 		Platform::String^ _targetUrl;
 
-		void UserControl_DataContextChanged(Windows::UI::Xaml::FrameworkElement^ sender, Windows::UI::Xaml::DataContextChangedEventArgs^ args);
-		void ZoomToContent();
 		void UserControl_Unloaded(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e);
 		void Retry_Clicked(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e);
 		void scrollViewer_ViewChanged(Platform::Object^ sender, Windows::UI::Xaml::Controls::ScrollViewerViewChangedEventArgs^ e);
 
 		void Load();
-		void AfterInitialLoad(Platform::Array<uint8_t>^ initialData, Windows::Storage::Streams::IInputStream^ inputStream);
 		void ErrorHandler(Platform::String^ errorText);
 		void scrollViewer_DoubleTapped(Platform::Object^ sender, Windows::UI::Xaml::Input::DoubleTappedRoutedEventArgs^ e);
+	private:
+		static void OnUrlChanged(DependencyObject^ d, Windows::UI::Xaml::DependencyPropertyChangedEventArgs^ e);
+		static Windows::UI::Xaml::DependencyProperty^ _urlProperty;
+	public:
+		property Platform::String^ Url
+		{
+			Platform::String^ get() { return (Platform::String^)GetValue(_urlProperty); }
+			void set(Platform::String^ value) { SetValue(_urlProperty, value); }
+		}
+
+		static property Windows::UI::Xaml::DependencyProperty^ UrlProperty
+		{
+			Windows::UI::Xaml::DependencyProperty^ get() { return _urlProperty; }
+		}
 	};
 }
