@@ -30,12 +30,16 @@ using std::shared_ptr;
 
 ::GifRenderer::ZoomableImageControl::ZoomableImageControl()
 {
+    ResizeToFitHorizontal = false;
 	InitializeComponent();
 }
 
 DependencyProperty^ ::GifRenderer::ZoomableImageControl::_urlProperty = DependencyProperty::Register("Url",
 	String::typeid, ::GifRenderer::ZoomableImageControl::typeid, ref new PropertyMetadata(nullptr,
 		ref new Windows::UI::Xaml::PropertyChangedCallback(&::GifRenderer::ZoomableImageControl::OnUrlChanged)));
+
+DependencyProperty^ ::GifRenderer::ZoomableImageControl::_resizeToFitHorizontalProperty = DependencyProperty::Register("ResizeToFitHorizontal",
+    bool::typeid, ::GifRenderer::ZoomableImageControl::typeid, nullptr);
 
 void ::GifRenderer::ZoomableImageControl::OnUrlChanged(DependencyObject^ d, DependencyPropertyChangedEventArgs^ e)
 {
@@ -170,7 +174,15 @@ void ::GifRenderer::ZoomableImageControl::Load()
 					image->Width = maxSize.Width;
 					image->Height = maxSize.Height;
 
-					auto fillZoom = (float)min((ActualWidth / maxSize.Width), (ActualHeight / maxSize.Height));
+					auto fillZoom = ResizeToFitHorizontal ?  
+                        (ActualWidth / maxSize.Width) :
+                        (float)min((ActualWidth / maxSize.Width), (ActualHeight / maxSize.Height));
+
+                    if (ResizeToFitHorizontal)
+                    {
+                        Height = fillZoom * maxSize.Height;
+                    }
+
 					_currentZoom = min(20, max(fillZoom, 0.1f));
 					scrollViewer->MinZoomFactor = max(_currentZoom * .5f, .1f);
 					scrollViewer->MaxZoomFactor = 20;

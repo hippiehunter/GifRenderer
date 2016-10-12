@@ -173,7 +173,7 @@ task<IRandomAccessStream^> ResourceLoader::GetHttpUri()
       return continue_task(response->Content->ReadAsInputStreamAsync(),
         [=](IInputStream^ responseStream)
       {
-        return continue_task(responseStream->ReadAsync(ref new Buffer(4096), 4096, InputStreamOptions::ReadAhead),
+        return continue_task(responseStream->ReadAsync(ref new Buffer(16384), 16384, InputStreamOptions::ReadAhead),
           [=](IBuffer^ buffer)
         {
           try

@@ -37,6 +37,7 @@ namespace GifRenderer
 	private:
 		static void OnUrlChanged(DependencyObject^ d, Windows::UI::Xaml::DependencyPropertyChangedEventArgs^ e);
 		static Windows::UI::Xaml::DependencyProperty^ _urlProperty;
+        static Windows::UI::Xaml::DependencyProperty^ _resizeToFitHorizontalProperty;
 	public:
 		property Platform::String^ Url
 		{
@@ -48,5 +49,16 @@ namespace GifRenderer
 		{
 			Windows::UI::Xaml::DependencyProperty^ get() { return _urlProperty; }
 		}
+
+        property bool ResizeToFitHorizontal
+        {
+            bool get() { return (bool)GetValue(_resizeToFitHorizontalProperty); }
+            void set(bool value) { SetValue(_resizeToFitHorizontalProperty, value); }
+        }
+
+        static property Windows::UI::Xaml::DependencyProperty^ ResizeToFitHorizontalProperty
+        {
+            Windows::UI::Xaml::DependencyProperty^ get() { return _resizeToFitHorizontalProperty; }
+        }
 	};
 }
